@@ -1,11 +1,9 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nova", "Nova\Nova.csproj", "{4841A375-36EE-4458-8F61-AD9BB0C634F5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nova.Test", "Nova.Test\Nova.Test.csproj", "{8DE53900-F643-478A-A562-A5E509EBCD37}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nova.Shell", "Nova.Shell\Nova.Shell.csproj", "{E5445841-AC3C-43A5-9853-3E032EA563CF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -52,21 +50,6 @@ Global
 		{8DE53900-F643-478A-A562-A5E509EBCD37}.Release|Mixed Platforms.Build.0 = Release|x86
 		{8DE53900-F643-478A-A562-A5E509EBCD37}.Release|x86.ActiveCfg = Release|x86
 		{8DE53900-F643-478A-A562-A5E509EBCD37}.Release|x86.Build.0 = Release|x86
-		{E5445841-AC3C-43A5-9853-3E032EA563CF}.Debug|Any CPU.ActiveCfg = Debug|x86
-		{E5445841-AC3C-43A5-9853-3E032EA563CF}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
-		{E5445841-AC3C-43A5-9853-3E032EA563CF}.Debug|Mixed Platforms.Build.0 = Debug|x86
-		{E5445841-AC3C-43A5-9853-3E032EA563CF}.Debug|x86.ActiveCfg = Debug|x86
-		{E5445841-AC3C-43A5-9853-3E032EA563CF}.Debug|x86.Build.0 = Debug|x86
-		{E5445841-AC3C-43A5-9853-3E032EA563CF}.Publish|Any CPU.ActiveCfg = Release|x86
-		{E5445841-AC3C-43A5-9853-3E032EA563CF}.Publish|Mixed Platforms.ActiveCfg = Publish|Any CPU
-		{E5445841-AC3C-43A5-9853-3E032EA563CF}.Publish|Mixed Platforms.Build.0 = Publish|Any CPU
-		{E5445841-AC3C-43A5-9853-3E032EA563CF}.Publish|x86.ActiveCfg = Release|x86
-		{E5445841-AC3C-43A5-9853-3E032EA563CF}.Publish|x86.Build.0 = Release|x86
-		{E5445841-AC3C-43A5-9853-3E032EA563CF}.Release|Any CPU.ActiveCfg = Release|x86
-		{E5445841-AC3C-43A5-9853-3E032EA563CF}.Release|Mixed Platforms.ActiveCfg = Release|x86
-		{E5445841-AC3C-43A5-9853-3E032EA563CF}.Release|Mixed Platforms.Build.0 = Release|x86
-		{E5445841-AC3C-43A5-9853-3E032EA563CF}.Release|x86.ActiveCfg = Release|x86
-		{E5445841-AC3C-43A5-9853-3E032EA563CF}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
