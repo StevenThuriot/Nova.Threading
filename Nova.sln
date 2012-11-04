@@ -5,6 +5,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nova", "Nova\Nova.csproj", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nova.Test", "Nova.Test\Nova.Test.csproj", "{8DE53900-F643-478A-A562-A5E509EBCD37}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nova.Threading", "Nova.Threading\Nova.Threading.csproj", "{28F961F0-1305-46EE-BC24-0A04D89F1E9E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -50,6 +52,21 @@ Global
 		{8DE53900-F643-478A-A562-A5E509EBCD37}.Release|Mixed Platforms.Build.0 = Release|x86
 		{8DE53900-F643-478A-A562-A5E509EBCD37}.Release|x86.ActiveCfg = Release|x86
 		{8DE53900-F643-478A-A562-A5E509EBCD37}.Release|x86.Build.0 = Release|x86
+		{28F961F0-1305-46EE-BC24-0A04D89F1E9E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{28F961F0-1305-46EE-BC24-0A04D89F1E9E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{28F961F0-1305-46EE-BC24-0A04D89F1E9E}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{28F961F0-1305-46EE-BC24-0A04D89F1E9E}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{28F961F0-1305-46EE-BC24-0A04D89F1E9E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{28F961F0-1305-46EE-BC24-0A04D89F1E9E}.Publish|Any CPU.ActiveCfg = Release|Any CPU
+		{28F961F0-1305-46EE-BC24-0A04D89F1E9E}.Publish|Any CPU.Build.0 = Release|Any CPU
+		{28F961F0-1305-46EE-BC24-0A04D89F1E9E}.Publish|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{28F961F0-1305-46EE-BC24-0A04D89F1E9E}.Publish|Mixed Platforms.Build.0 = Release|Any CPU
+		{28F961F0-1305-46EE-BC24-0A04D89F1E9E}.Publish|x86.ActiveCfg = Release|Any CPU
+		{28F961F0-1305-46EE-BC24-0A04D89F1E9E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{28F961F0-1305-46EE-BC24-0A04D89F1E9E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{28F961F0-1305-46EE-BC24-0A04D89F1E9E}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{28F961F0-1305-46EE-BC24-0A04D89F1E9E}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{28F961F0-1305-46EE-BC24-0A04D89F1E9E}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
