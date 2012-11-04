@@ -103,7 +103,8 @@ namespace Nova.Threading
                 //Don't enqueue new actions when we have a blocking action still in the list.
                 if (IsBlocked) return;
 
-                if (action.Options.CheckFlags(ActionFlags.Blocking, ActionFlags.LeaveStep)) //LeaveStep is blocking by its nature.
+                if (action.Options.CheckFlags(ActionFlags.Blocking) || 
+                    action.Options.CheckFlags(ActionFlags.LeaveStep)) //LeaveStep is blocking by its nature.
                 {
                     var key = ActionQueueCollection.GenerateID(action);
                     _BlockingActions.Add(key);
