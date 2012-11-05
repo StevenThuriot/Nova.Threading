@@ -96,8 +96,11 @@ namespace Nova.Threading
         /// <param name="action">The action.</param>
         public void Enqueue(IAction action)
         {
+            if (_Disposed) return; //Making sure enqueues won't happen after a dispose.
+
             lock (_Lock)
             {
+
                 //Don't enqueue new actions when we have a blocking action still in the list.
                 if (IsBlocked) return;
 
