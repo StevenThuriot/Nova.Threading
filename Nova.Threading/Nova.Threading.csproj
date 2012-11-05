@@ -49,10 +49,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ActionFlags.cs" />
+    <Compile Include="ActionFlagsExtensions.cs" />
     <Compile Include="ActionQueue.cs" />
     <Compile Include="ActionQueueCollection.cs" />
     <Compile Include="ActionQueueEventArgs.cs" />
     <Compile Include="ActionQueueManager.cs" />
+    <Compile Include="FlagChecker.cs" />
+    <Compile Include="ThreadingAttributes.cs" />
     <Compile Include="IAction.cs" />
     <Compile Include="IActionQueueManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

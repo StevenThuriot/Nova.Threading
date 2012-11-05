@@ -18,38 +18,9 @@
 
 #endregion
 using System;
-using System.Linq;
 
 namespace Nova.Threading
 {
-    /// <summary>
-    /// ActionFlags Extensions.
-    /// </summary>
-    internal static class ActionFlagsExtensions
-    {
-        /// <summary>
-        /// Checks the flags.
-        /// </summary>
-        /// <param name="flags">The flags.</param>
-        /// <param name="value">The value.</param>
-        /// <returns></returns>
-        public static bool CheckFlags(this ActionFlags flags, ActionFlags value)
-        {
-            return (flags & value) == value;
-        }
-
-        /// <summary>
-        /// Checks the flags using an OR operator.
-        /// </summary>
-        /// <param name="flags">The flags.</param>
-        /// <param name="values">The values.</param>
-        /// <returns></returns>
-        public static bool CheckFlags(this ActionFlags flags, params ActionFlags[] values)
-        {
-            return values.Any(x => flags.CheckFlags(x));
-        }
-    }
-
     /// <summary>
     /// Flags to define special behaviour to an action.
     /// </summary>

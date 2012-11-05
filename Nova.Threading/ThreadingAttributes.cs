@@ -1,4 +1,4 @@
-#region License
+﻿#region License
 
 // 
 //  Copyright 2012 Steven Thuriot
@@ -21,8 +21,8 @@ using System;
 
 namespace Nova.Threading
 {
-    public interface IActionQueueManager : IDisposable
-    {
-        void Queue(IAction action);
-    }
+    public class EnterStepAttribute : Attribute { }
+    public class LeaveStepAttribute : Attribute { }
+    public class BlockingAttribute : Attribute { }
+
 }
