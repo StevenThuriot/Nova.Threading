@@ -21,8 +21,13 @@ using System;
 
 namespace Nova.Threading
 {
+    [AttributeUsage(AttributeTargets.Class)]
     public class EnterStepAttribute : Attribute { }
+
+    [AttributeUsage(AttributeTargets.Class)]
     public class LeaveStepAttribute : Attribute { }
+
+    [AttributeUsage(AttributeTargets.Class)]
     public class BlockingAttribute : Attribute { }
 
 }
