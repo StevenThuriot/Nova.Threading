@@ -69,7 +69,7 @@ namespace Nova.Threading
         /// <summary>
         /// The queue will be terminated after finishing this task. This is also blocking per definition.
         /// </summary>
-        LeaveStep = 1 << 2,
+        LeaveStep = 1 << 2 | Blocking,
 
         /// <summary>
         /// A blocking action. New actions won't be queued until this action has finished executing.
