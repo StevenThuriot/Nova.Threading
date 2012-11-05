@@ -101,6 +101,9 @@ namespace Nova.Threading
                 //Don't enqueue new actions when we have a blocking action still in the list.
                 if (IsBlocked) return;
 
+                //Don't add any actions when the collection has been set as completed.
+                if (_BlockingCollection.IsAddingCompleted) return;
+
                 _BlockingCollection.Add(action);
             }
         }
