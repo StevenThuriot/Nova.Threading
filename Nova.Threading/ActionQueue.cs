@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 
 // 
 //  Copyright 2012 Steven Thuriot
@@ -17,6 +17,7 @@
 // 
 #endregion
 using System;
+using System.Linq;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
@@ -35,11 +36,9 @@ namespace Nova.Threading
         private readonly BlockingCollection<IAction> _BlockingCollection;
         private readonly CancellationTokenSource _TokenSource;
 
-        private readonly List<string> _BlockingActions;
-
         private bool IsBlocked
         {
-            get { return _BlockingActions.Count > 0; }
+            get { return _BlockingCollection.Any(x => x.Options.CheckFlags(ActionFlags.Blocking)); }
         }
 
         /// <summary>
@@ -82,7 +81,6 @@ namespace Nova.Threading
         {
             _TokenSource = new CancellationTokenSource();
             _BlockingCollection = new BlockingCollection<IAction>();
-            _BlockingActions = new List<string>();
 
             SessionID = sessionID;
             QueueID = queueID;
@@ -103,13 +101,6 @@ namespace Nova.Threading
                 //Don't enqueue new actions when we have a blocking action still in the list.
                 if (IsBlocked) return;
 
-                if (action.Options.CheckFlags(ActionFlags.Blocking) || 
-                    action.Options.CheckFlags(ActionFlags.LeaveStep)) //LeaveStep is blocking by its nature.
-                {
-                    var key = ActionQueueCollection.GenerateID(action);
-                    _BlockingActions.Add(key);
-                }
-
                 _BlockingCollection.Add(action);
             }
         }
@@ -123,7 +114,6 @@ namespace Nova.Threading
             {
                 //Leaving current step/use case. No more actions should be executed.
                 _BlockingCollection.CompleteAdding();
-                _BlockingActions.Clear();
 
                 //Hard cancel in case it's needed.
                 if (!_BlockingCollection.IsCompleted)
@@ -131,18 +121,6 @@ namespace Nova.Threading
 
                 var handler = CleanUpQueue;
                 if (handler != null) handler(this, new ActionQueueEventArgs(SessionID, QueueID));
-            }
-        }
-
-        /// <summary>
-        /// Removes the blocking action.
-        /// </summary>
-        /// <param name="key">The key.</param>
-        private void RemoveBlockingAction(string key)
-        {
-            lock (_Lock)
-            {
-                _BlockingActions.Remove(key);
             }
         }
 
@@ -180,11 +158,6 @@ namespace Nova.Threading
             if (action.Options.CheckFlags(ActionFlags.LeaveStep))
             {
                 action.ContinueWith(FinishQueue);
-            }
-            else if (action.Options.CheckFlags(ActionFlags.Blocking))
-            {
-                var key = ActionQueueCollection.GenerateID(action);
-                action.ContinueWith(() => RemoveBlockingAction(key));
             }
 
             action.Execute();
@@ -230,7 +203,6 @@ namespace Nova.Threading
                         _TokenSource.Cancel();
                 }
 
-                _BlockingActions.Clear();
                 _BlockingCollection.Dispose();
                 _TokenSource.Dispose();
             }
