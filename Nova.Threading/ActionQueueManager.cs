@@ -18,6 +18,8 @@
 
 #endregion
 using System;
+using System.Diagnostics;
+using System.Linq;
 
 namespace Nova.Threading
 {
@@ -26,6 +28,8 @@ namespace Nova.Threading
     /// </summary>
     public class ActionQueueManager : IActionQueueManager
     {
+        internal static TraceSource TraceSource = new TraceSource("Nova.Threading");
+
         private readonly object _QueueLock = new object();
         private bool _Disposed;
         private readonly ActionQueueCollection _Queues;
@@ -59,6 +63,7 @@ namespace Nova.Threading
                     //Create new Queue on EnterActions when it doesn't exist yet.
                     queue = new ActionQueue(action);
                     queue.CleanUpQueue += CleanUpQueue;
+
                     _Queues.Add(queue);
                 }
 
