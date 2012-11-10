@@ -17,7 +17,6 @@
 // 
 
 #endregion
-using System.Linq;
 
 namespace Nova.Threading
 {
@@ -35,17 +34,6 @@ namespace Nova.Threading
         public static bool CheckFlags(this ActionFlags flags, ActionFlags value)
         {
             return (flags & value) == value;
-        }
-
-        /// <summary>
-        /// Checks the flags using an OR operator.
-        /// </summary>
-        /// <param name="flags">The flags.</param>
-        /// <param name="values">The values.</param>
-        /// <returns></returns>
-        public static bool CheckFlags(this ActionFlags flags, params ActionFlags[] values)
-        {
-            return values.Any(x => CheckFlags(flags, x));
         }
     }
 }
