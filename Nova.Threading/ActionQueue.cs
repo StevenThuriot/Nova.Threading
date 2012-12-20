@@ -17,7 +17,6 @@
 // 
 #endregion
 using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Collections.Concurrent;
 using System.Globalization;
@@ -86,8 +85,19 @@ namespace Nova.Threading
             QueueID = queueID;
 
             var currentThread = Thread.CurrentThread;
+            var currentCulture = currentThread.CurrentCulture;
+            var currentUICulture = currentThread.CurrentUICulture;
 
-            Task.Factory.StartNew(() => Listen(currentThread.CurrentCulture, currentThread.CurrentUICulture), TaskCreationOptions.LongRunning);
+            var name = string.Format(currentCulture, "ActionQueue - Session: {0} - Queue: {1}", sessionID, queueID);
+            var thread = new Thread(Listen)
+                {
+                    CurrentCulture = currentCulture,
+                    CurrentUICulture = currentUICulture,
+                    IsBackground = true,
+                    Name = name
+                };
+
+            thread.Start();
         }
 
         /// <summary>
@@ -133,15 +143,8 @@ namespace Nova.Threading
         /// <summary>
         /// Listens for newly queued actions and executes them.
         /// </summary>
-        /// <param name="currentCulture">The current culture.</param>
-        /// <param name="currentUICulture">The current UI culture.</param>
-        private void Listen(CultureInfo currentCulture, CultureInfo currentUICulture)
+        private void Listen()
         {
-            var currentThread = Thread.CurrentThread;
-            
-            currentThread.CurrentCulture = currentCulture;
-            currentThread.CurrentUICulture = currentUICulture;
-
             try
             {
                 foreach (var action in _BlockingCollection.GetConsumingEnumerable(_TokenSource.Token))
