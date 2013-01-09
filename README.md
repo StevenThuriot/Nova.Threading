@@ -7,7 +7,7 @@ Nova
 
 * Allows graphical validation of controls.
 
-* Allows the usage of asynchronous actions where you don’t have to worry about a thing, the framework will take care of it.
+* Allows the usage of asynchronous actions where you don't have to worry about a thing, the framework will take care of it.
 
 * Easily customizable for your project. All resources are present in the resource dictionary and can be overwritten by the project using the framework.
 
@@ -19,4 +19,4 @@ Nova
 
 * Built-in costumizable exception handling for uncatched exceptions.
 
-* …
+* ...
