@@ -17,7 +17,6 @@
 // 
 #endregion
 using System;
-using System.Threading.Tasks;
 
 namespace Nova.Threading
 {
@@ -61,31 +60,6 @@ namespace Nova.Threading
         /// <param name="action">The action.</param>
         /// <returns></returns>
         IAction ContinueWith(Action action);
-
-        /// <summary>
-        /// Creates a continuation that executes when the target completes.
-        /// </summary>
-        /// <param name="action">The action.</param>
-        /// <param name="scheduler">The scheduler.</param>
-        /// <returns></returns>
-        IAction ContinueWith(Action action, TaskScheduler scheduler);
-
-        /// <summary>
-        /// Creates a continuation that executes when the target completes.
-        /// </summary>
-        /// <param name="action">The action.</param>
-        /// <param name="continuationOptions">The continuation options.</param>
-        /// <returns></returns>
-        IAction ContinueWith(Action action, TaskContinuationOptions continuationOptions);
-
-        /// <summary>
-        /// Creates a continuation that executes when the target completes.
-        /// </summary>
-        /// <param name="action">The action.</param>
-        /// <param name="continuationOptions">The continuation options.</param>
-        /// <param name="scheduler">The scheduler.</param>
-        /// <returns></returns>
-        IAction ContinueWith(Action action, TaskContinuationOptions continuationOptions, TaskScheduler scheduler);
 
         /// <summary>
         /// Creates a continuation that executes when the target completes.

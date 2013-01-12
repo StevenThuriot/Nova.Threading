@@ -61,6 +61,9 @@ namespace Nova.Threading
         /// <param name="action">The action.</param>
         public WrappedTask(Guid sessionID, Guid queueID, Action action)
         {
+            if (action == null)
+                throw new ArgumentNullException("action");
+
             SessionID = sessionID;
             QueueID = queueID;
             _InitTask = new Task(action);
@@ -82,44 +85,10 @@ namespace Nova.Threading
         /// <returns></returns>
         public IAction ContinueWith(Action action)
         {
-            _LastContinuationTask = _LastContinuationTask.ContinueWith(_ => action());
-            return this;
-        }
+            if (action == null)
+                throw new ArgumentNullException("action");
 
-        /// <summary>
-        /// Creates a continuation that executes when the target completes.
-        /// </summary>
-        /// <param name="action">The action.</param>
-        /// <param name="scheduler">The scheduler.</param>
-        /// <returns></returns>
-        public IAction ContinueWith(Action action, TaskScheduler scheduler)
-        {
-            _LastContinuationTask = _LastContinuationTask.ContinueWith(_ => action(), scheduler);
-            return this;
-        }
-
-        /// <summary>
-        /// Creates a continuation that executes when the target completes.
-        /// </summary>
-        /// <param name="action">The action.</param>
-        /// <param name="continuationOptions">The continuation options.</param>
-        /// <returns></returns>
-        public IAction ContinueWith(Action action, TaskContinuationOptions continuationOptions)
-        {
-            _LastContinuationTask = _LastContinuationTask.ContinueWith(_ => action(), continuationOptions);
-            return this;
-        }
-
-        /// <summary>
-        /// Creates a continuation that executes when the target completes.
-        /// </summary>
-        /// <param name="action">The action.</param>
-        /// <param name="continuationOptions">The continuation options.</param>
-        /// <param name="scheduler">The scheduler.</param>
-        /// <returns></returns>
-        public IAction ContinueWith(Action action, TaskContinuationOptions continuationOptions, TaskScheduler scheduler)
-        {
-            _LastContinuationTask = _LastContinuationTask.ContinueWith(_ => action(), CancellationToken.None, continuationOptions, scheduler);
+            _LastContinuationTask = _LastContinuationTask.ContinueWith(_ => action(), TaskContinuationOptions.HideScheduler);
             return this;
         }
 
@@ -130,7 +99,11 @@ namespace Nova.Threading
         /// <returns></returns>
         public IAction ContinueOnMainThreadWith(Action action)
         {
-            return ContinueWith(action, TaskScheduler.FromCurrentSynchronizationContext());
+            if (action == null)
+                throw new ArgumentNullException("action");
+
+            _LastContinuationTask = _LastContinuationTask.ContinueWith(_ => action(), new CancellationToken(), TaskContinuationOptions.HideScheduler, TaskScheduler.FromCurrentSynchronizationContext());
+            return this;
         }
     }
 }
