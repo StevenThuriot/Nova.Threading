@@ -102,7 +102,7 @@ namespace Nova.Threading
             if (action == null)
                 throw new ArgumentNullException("action");
 
-            _LastContinuationTask = _LastContinuationTask.ContinueWith(_ => action(), new CancellationToken(), TaskContinuationOptions.HideScheduler, TaskScheduler.FromCurrentSynchronizationContext());
+            _LastContinuationTask = _LastContinuationTask.ContinueWith(_ => action(), CancellationToken.None, TaskContinuationOptions.HideScheduler, TaskScheduler.FromCurrentSynchronizationContext());
             return this;
         }
     }
