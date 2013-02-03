@@ -29,6 +29,7 @@ namespace Nova.Threading
     {
         private readonly Task _InitTask; //Need this to start execution
         private Task _LastContinuationTask; //Need this for continuations
+        private Action<Exception> _HandleException;
 
         /// <summary>
         /// Gets the session ID.
@@ -75,7 +76,23 @@ namespace Nova.Threading
         /// </summary>
         public void Execute()
         {
+            if (_HandleException != null)
+            {
+                _LastContinuationTask = _LastContinuationTask.ContinueWith(HandleException);
+            }
+
             _InitTask.Start();
+        }
+
+        /// <summary>
+        /// Handles the exception for the passed task.
+        /// </summary>
+        /// <param name="task">The task.</param>
+        private void HandleException(Task task)
+        {
+            if (!task.IsFaulted && task.Exception == null) return;
+
+            _HandleException(task.Exception);
         }
 
         /// <summary>
@@ -104,6 +121,17 @@ namespace Nova.Threading
 
             _LastContinuationTask = _LastContinuationTask.ContinueWith(_ => action(), CancellationToken.None, TaskContinuationOptions.HideScheduler, TaskScheduler.FromCurrentSynchronizationContext());
             return this;
+        }
+
+        /// <summary>
+        /// Handles the exception of the previous task.
+        /// </summary>
+        /// <param name="action">The action.</param>
+        /// <returns></returns>
+        /// <exception cref="System.NotImplementedException"></exception>
+        public void HandleException(Action<Exception> action)
+        {
+            _HandleException = action;
         }
     }
 }

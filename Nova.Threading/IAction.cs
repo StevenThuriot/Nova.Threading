@@ -67,5 +67,12 @@ namespace Nova.Threading
         /// <param name="action">The action.</param>
         /// <returns></returns>
         IAction ContinueOnMainThreadWith(Action action);
+
+
+        /// <summary>
+        /// Exception handler for this action.
+        /// </summary>
+        /// <param name="action">The action.</param>
+        void HandleException(Action<Exception> action);
     }
 }
