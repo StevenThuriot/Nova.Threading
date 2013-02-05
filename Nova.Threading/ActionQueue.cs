@@ -467,7 +467,7 @@ namespace Nova.Threading
                 /// <param name="action">The action.</param>
                 protected override void SetStateDependingOn(IAction action)
                 {
-                    //State transaction is no longer allowed.
+                    //State transition is no longer allowed.
                 }
 
                 /// <summary>
