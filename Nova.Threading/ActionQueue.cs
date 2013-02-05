@@ -16,12 +16,10 @@
 // limitations under the License.
 // 
 #endregion
+
 using System;
-using System.Linq;
-using System.Collections.Concurrent;
-using System.Globalization;
 using System.Threading;
-using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 
 namespace Nova.Threading
 {
@@ -30,15 +28,13 @@ namespace Nova.Threading
     /// </summary>
     internal class ActionQueue : IDisposable
     {
-        private bool _Disposed;
-        private readonly object _Lock = new object();
-        private readonly BlockingCollection<IAction> _BlockingCollection;
-        private readonly CancellationTokenSource _TokenSource;
+        public readonly static TimeSpan DefaultWaitTimeout = TimeSpan.FromMilliseconds(250);
 
-        private bool IsBlocked
-        {
-            get { return _BlockingCollection.Any(x => x.Options.CheckFlags(ActionFlags.Blocking)); }
-        }
+        private bool _Disposed;
+        private readonly CancellationTokenSource _TokenSource;
+        private readonly ActionBlock<IAction> _ActionBlock;
+        private readonly Mutex _Mutex;
+        private ActionQueueState _State;
 
         /// <summary>
         /// Occurs when this queue needs to be cleaned up.
@@ -64,6 +60,30 @@ namespace Nova.Threading
         /// <summary>
         /// Initializes a new instance of the <see cref="ActionQueue" /> class.
         /// </summary>
+        /// <param name="sessionID">The session ID.</param>
+        /// <param name="queueID">The queue ID.</param>
+        public ActionQueue(Guid sessionID, Guid queueID)
+        {
+            SessionID = sessionID;
+            QueueID = queueID;
+
+            _Mutex = new Mutex();
+
+            ActionQueueState.Initialize(this);
+
+            _TokenSource = new CancellationTokenSource();
+            var options = new ExecutionDataflowBlockOptions
+            {
+                CancellationToken = _TokenSource.Token,
+                MaxDegreeOfParallelism = 1
+            };
+
+            _ActionBlock = new ActionBlock<IAction>(x => x.Execute(), options);
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ActionQueue" /> class.
+        /// </summary>
         /// <param name="action">The action.</param>
         public ActionQueue(IAction action)
             : this(action.SessionID, action.QueueID)
@@ -72,104 +92,29 @@ namespace Nova.Threading
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ActionQueue" /> class.
-        /// </summary>
-        /// <param name="sessionID">The session ID.</param>
-        /// <param name="queueID">The queue ID.</param>
-        public ActionQueue(Guid sessionID, Guid queueID)
-        {
-            _TokenSource = new CancellationTokenSource();
-            _BlockingCollection = new BlockingCollection<IAction>();
-
-            SessionID = sessionID;
-            QueueID = queueID;
-
-            var currentThread = Thread.CurrentThread;
-            var currentCulture = currentThread.CurrentCulture;
-            var currentUICulture = currentThread.CurrentUICulture;
-
-            var name = string.Format(currentCulture, "ActionQueue - Session: {0} - Queue: {1}", sessionID, queueID);
-            var thread = new Thread(Listen)
-                {
-                    CurrentCulture = currentCulture,
-                    CurrentUICulture = currentUICulture,
-                    IsBackground = true,
-                    Name = name
-                };
-
-            thread.Start();
-        }
-
-        /// <summary>
         /// Enqueues the specified action.
         /// </summary>
         /// <param name="action">The action.</param>
-        public void Enqueue(IAction action)
+        public bool Enqueue(IAction action)
         {
-            if (_Disposed) return; //Making sure enqueues won't happen after a dispose.
-
-            lock (_Lock)
-            {
-
-                //Don't enqueue new actions when we have a blocking action still in the list.
-                if (IsBlocked) return;
-
-                //Don't add any actions when the collection has been set as completed.
-                if (_BlockingCollection.IsAddingCompleted) return;
-
-                _BlockingCollection.Add(action);
-            }
+            return _State.Enqueue(action);
         }
 
         /// <summary>
-        /// Finishes the queue.
+        /// Signals to the queue that it shouldn't accept or produce any more messages and shouldn't consume any more postponed messages.
         /// </summary>
-        private void FinishQueue()
+        private void Complete(bool cancelIfNeeded = true)
         {
-            lock (_Lock)
+            lock (_Mutex)
             {
-                //Leaving current step/use case. No more actions should be executed.
-                _BlockingCollection.CompleteAdding();
+                _ActionBlock.Complete();
 
-                //Hard cancel in case it's needed.
-                if (!_BlockingCollection.IsCompleted)
-                    _TokenSource.Cancel();
-
-                var handler = CleanUpQueue;
-                if (handler != null) handler(this, new ActionQueueEventArgs(SessionID, QueueID));
-            }
-        }
-
-        /// <summary>
-        /// Listens for newly queued actions and executes them.
-        /// </summary>
-        private void Listen()
-        {
-            try
-            {
-                foreach (var action in _BlockingCollection.GetConsumingEnumerable(_TokenSource.Token))
+                if (cancelIfNeeded && !_ActionBlock.Completion.Wait(DefaultWaitTimeout))
                 {
-                    Execute(action);
+                    //Hard cancel in case it's needed.
+                    _TokenSource.Cancel();
                 }
             }
-            catch (OperationCanceledException)
-            {
-                //Cleaning up or Disposing Action Queue.
-            }
-        }
-
-        /// <summary>
-        /// Executes the specified action.
-        /// </summary>
-        /// <param name="action">The action.</param>
-        private void Execute(IAction action)
-        {
-            if (action.Options.CheckFlags(ActionFlags.LeaveStep))
-            {
-                action.ContinueWith(FinishQueue);
-            }
-
-            action.Execute();
         }
 
         /// <summary>
@@ -200,23 +145,345 @@ namespace Nova.Threading
 
             if (disposing)
             {
-                CleanUpQueue = null;
+                ActionQueueState.SetAsDisposed(this);
 
-                if (!_BlockingCollection.IsAddingCompleted)
+                if (!_ActionBlock.Completion.IsCompleted)
                 {
                     //Leaving current step/use case. No more actions should be executed.
-                    _BlockingCollection.CompleteAdding();
-
-                    //Hard cancel in case it's needed.
-                    if (!_BlockingCollection.IsCompleted)
-                        _TokenSource.Cancel();
+                    Complete();
                 }
 
-                _BlockingCollection.Dispose();
                 _TokenSource.Dispose();
+                _Mutex.Dispose();
+                CleanUpQueue = null;
             }
 
             _Disposed = true;
         }
+
+        #region *** Action Queue State ***
+
+        /// <summary>
+        /// Base State Class for the ActionQueue.
+        /// </summary>
+        private abstract class ActionQueueState
+        {
+            private readonly ActionQueue _Queue;
+
+            /// <summary>
+            /// Prevents a default instance of the <see cref="ActionQueueState" /> class from being created.
+            /// </summary>
+            /// <param name="queue">The queue.</param>
+            private ActionQueueState(ActionQueue queue)
+            {
+                _Queue = queue;
+            }
+
+            /// <summary>
+            /// Initializes the ActionQueue's state.
+            /// </summary>
+            /// <param name="actionQueue">The action queue</param>
+            public static void Initialize(ActionQueue actionQueue)
+            {
+                lock (actionQueue._Mutex)
+                {
+                    actionQueue._State = new RunningActionQueueState(actionQueue);
+                }
+            }
+
+            /// <summary>
+            /// Sets the ActionQueue's state as disposed.
+            /// </summary>
+            /// <param name="actionQueue">The action queue</param>
+            public static void SetAsDisposed(ActionQueue actionQueue)
+            {
+                lock (actionQueue._Mutex)
+                {
+                    actionQueue._State = new DisposedActionQueueState(actionQueue);
+                }
+            }
+
+            /// <summary>
+            /// Enqueues the action and corrects the state, if needed.
+            /// </summary>
+            /// <param name="action">The action to be queued.</param>
+            /// <returns>True if the action was queued.</returns>
+            public bool Enqueue(IAction action)
+            {
+                lock (_Queue._Mutex)
+                {
+                    SetStateDependingOn(action);
+                    return _Queue._State.EnqueueAction(action);
+                }
+            }
+
+            /// <summary>
+            /// Sets the state depending on the passed action.
+            /// </summary>
+            /// <param name="action">The action.</param>
+            protected virtual void SetStateDependingOn(IAction action)
+            {
+                if (action.Options.CheckFlags(ActionFlags.Terminating))
+                {
+                    _Queue._State = new TerminatingActionQueueState(_Queue);
+                }
+                else if (action.Options.CheckFlags(ActionFlags.Blocking))
+                {
+                    _Queue._State = new BlockingActionQueueState(_Queue);
+                }
+            }
+
+            /// <summary>
+            /// Enqueues the action.
+            /// </summary>
+            /// <param name="action">The action.</param>
+            /// <returns></returns>
+            protected abstract bool EnqueueAction(IAction action);
+
+            #region *** Concrete States ***
+
+            /// <summary>
+            /// Default running state that just executes received actions.
+            /// </summary>
+            private class RunningActionQueueState : ActionQueueState
+            {
+                /// <summary>
+                /// Initializes a new instance of the <see cref="ActionQueueState.RunningActionQueueState" /> class.
+                /// </summary>
+                /// <param name="queue">The queue.</param>
+                public RunningActionQueueState(ActionQueue queue)
+                    : base(queue)
+                {
+                }
+
+                /// <summary>
+                /// Enqueues the action.
+                /// </summary>
+                /// <param name="action">The action.</param>
+                /// <returns></returns>
+                protected override bool EnqueueAction(IAction action)
+                {
+                    return _Queue._ActionBlock.Post(action);
+                }
+            }
+
+            /// <summary>
+            /// ActionQueue's state when disposed.
+            /// </summary>
+            private class DisposedActionQueueState : ActionQueueState
+            {
+                /// <summary>
+                /// Initializes a new instance of the <see cref="ActionQueueState.DisposedActionQueueState" /> class.
+                /// </summary>
+                /// <param name="queue">The queue.</param>
+                public DisposedActionQueueState(ActionQueue queue)
+                    : base(queue)
+                {
+                }
+
+                /// <summary>
+                /// Sets the state depending on the passed action.
+                /// </summary>
+                /// <param name="action">The action.</param>
+                protected override void SetStateDependingOn(IAction action)
+                {
+                    //State transition is no longer allowed.
+                    throw NewObjectDisposedException();
+                }
+
+                /// <summary>
+                /// Enqueues the action.
+                /// </summary>
+                /// <param name="action">The action.</param>
+                /// <returns></returns>
+                protected override bool EnqueueAction(IAction action)
+                {
+                    throw NewObjectDisposedException();
+                }
+
+                /// <summary>
+                /// Creates a new object disposed exception.
+                /// </summary>
+                /// <returns></returns>
+                private static ObjectDisposedException NewObjectDisposedException()
+                {
+                    return new ObjectDisposedException("This queue has already been disposed.");
+                }
+            }
+
+            /// <summary>
+            /// ActionQueue's state when receiving a Blocking Action.
+            /// </summary>
+            /// <remarks>
+            /// This state will revert into a BlockedActionQueueState automatically if an action is queued before the blocking action finishes.
+            /// If no action gets queued, the state will go from Blocking to Running directly, so the memory doesn't get poluted with an unused Blocked State.
+            /// If an action does get queued, the Blocked State will not accept any new actions until the Blocked Action resets the queue to Running.
+            /// </remarks>
+            private class BlockingActionQueueState : ActionQueueState
+            {
+                /// <summary>
+                /// Initializes a new instance of the <see cref="ActionQueueState.BlockingActionQueueState" /> class.
+                /// </summary>
+                /// <param name="queue">The queue.</param>
+                public BlockingActionQueueState(ActionQueue queue)
+                    : base(queue)
+                {
+                }
+
+                /// <summary>
+                /// Sets the state depending on the passed action.
+                /// </summary>
+                /// <param name="action">The action.</param>
+                protected override void SetStateDependingOn(IAction action)
+                {
+                    //If a new action gets queued, set the state to blocked. 
+                    //If not, we don't need to change the state 
+                    //  as it will polute memory without a reason.
+
+                    _Queue._State = new BlockedActionQueueState(_Queue);
+                }
+
+                protected override bool EnqueueAction(IAction action)
+                {
+                    //Reset state to running after completion. Blocked will be skipped if no action is queued before this one finishes.
+                    action.ContinueWith(ResetQueue);
+
+                    return _Queue._ActionBlock.Post(action);
+                }
+
+                /// <summary>
+                /// Resets the queue.
+                /// </summary>
+                private void ResetQueue()
+                {
+                    lock (_Queue._Mutex)
+                    {
+                        _Queue._State = new RunningActionQueueState(_Queue);
+                    }
+                }
+            }
+
+            /// <summary>
+            /// The ActionQueue is blocked while in this state.
+            /// </summary>
+            /// <remarks>
+            /// This state does not allow transitions or new actions on the queue.
+            /// The only way to get back to a running state, is by having the BlockingAction finish.
+            /// </remarks>
+            private class BlockedActionQueueState : ActionQueueState
+            {
+                /// <summary>
+                /// Initializes a new instance of the <see cref="ActionQueueState.BlockedActionQueueState" /> class.
+                /// </summary>
+                /// <param name="queue">The queue.</param>
+                public BlockedActionQueueState(ActionQueue queue)
+                    : base(queue)
+                {
+                }
+
+                /// <summary>
+                /// Sets the state depending on the passed action.
+                /// </summary>
+                /// <param name="action">The action.</param>
+                protected override void SetStateDependingOn(IAction action)
+                {
+                    //Don't allow state changes. Wait for the Blocking Action to reset the queue to running.
+                }
+
+                /// <summary>
+                /// Enqueues the action.
+                /// </summary>
+                /// <param name="action">The action.</param>
+                /// <returns></returns>
+                protected override bool EnqueueAction(IAction action)
+                {
+                    return false;
+                }
+            }
+
+            /// <summary>
+            /// State the ActionQueue is in when receiving a terminating action.
+            /// </summary>
+            /// <remarks>
+            /// This state will finalize the queue after terminating the action and revert into a TerminatedActionQueueState automatically if a new action gets queued, rejecting that action.
+            /// </remarks>
+            private class TerminatingActionQueueState : ActionQueueState
+            {
+                /// <summary>
+                /// Initializes a new instance of the <see cref="ActionQueueState.TerminatingActionQueueState" /> class.
+                /// </summary>
+                /// <param name="queue">The queue.</param>
+                public TerminatingActionQueueState(ActionQueue queue)
+                    : base(queue)
+                {
+                }
+
+                protected override void SetStateDependingOn(IAction action)
+                {
+                    //A terminating ActionQueue State can only become terminated.
+                    _Queue._State = new TerminatedActionQueueState(_Queue);
+                }
+
+                /// <summary>
+                /// Enqueues the action.
+                /// </summary>
+                /// <param name="action">The action.</param>
+                /// <returns></returns>
+                protected override bool EnqueueAction(IAction action)
+                {
+                    action.ContinueWith(FinalizeQueue);
+                    return _Queue._ActionBlock.Post(action);
+                }
+
+                /// <summary>
+                /// Signals to the dataflow block that it shouldn't accept or produce any more messages and shouldn't consume any more postponed messages.
+                /// </summary>
+                private void FinalizeQueue()
+                {
+                    _Queue.Complete();
+
+                    var handler = _Queue.CleanUpQueue;
+                    if (handler != null) handler(_Queue, new ActionQueueEventArgs(_Queue.SessionID, _Queue.QueueID));
+                }
+            }
+
+            /// <summary>
+            /// The Queue is terminated and waiting for disposal. It will not accept any new actions.
+            /// </summary>
+            private class TerminatedActionQueueState : ActionQueueState
+            {
+                /// <summary>
+                /// Initializes a new instance of the <see cref="ActionQueueState.TerminatedActionQueueState" /> class.
+                /// </summary>
+                /// <param name="queue">The queue.</param>
+                public TerminatedActionQueueState(ActionQueue queue)
+                    : base(queue)
+                {
+                }
+
+                /// <summary>
+                /// Sets the state depending on the passed action.
+                /// </summary>
+                /// <param name="action">The action.</param>
+                protected override void SetStateDependingOn(IAction action)
+                {
+                    //State transaction is no longer allowed.
+                }
+
+                /// <summary>
+                /// Enqueues the action.
+                /// </summary>
+                /// <param name="action">The action.</param>
+                /// <returns></returns>
+                protected override bool EnqueueAction(IAction action)
+                {
+                    return false;
+                }
+            }
+
+            #endregion *** Inheriting States. ***
+        }
+
+        #endregion *** Action Queue State ***
     }
 }

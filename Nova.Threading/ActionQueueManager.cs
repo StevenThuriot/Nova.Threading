@@ -19,7 +19,6 @@
 #endregion
 using System;
 using System.Diagnostics;
-using System.Linq;
 
 namespace Nova.Threading
 {
@@ -45,7 +44,7 @@ namespace Nova.Threading
         /// <summary>
         /// Queues the specified action.
         /// </summary>
-        /// <remarks>In case the queue does not exist yet, it will create it when queueing an "EnterStep" action.</remarks>
+        /// <remarks>In case the queue does not exist yet, it will create it when queueing a <see cref="ActionFlags.Creational"/> action.</remarks>
         /// <param name="action">The action.</param>
         public void Queue(IAction action)
         {
@@ -58,9 +57,9 @@ namespace Nova.Threading
                     return;
                 }
 
-                if (action.Options.CheckFlags(ActionFlags.EnterStep))
+                if (action.Options.CheckFlags(ActionFlags.Creational))
                 {
-                    //Create new Queue on EnterActions when it doesn't exist yet.
+                    //Create new Queue on Creational Actions when it doesn't exist yet.
                     queue = new ActionQueue(action);
                     queue.CleanUpQueue += CleanUpQueue;
 

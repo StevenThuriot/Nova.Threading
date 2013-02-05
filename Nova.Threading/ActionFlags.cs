@@ -35,12 +35,12 @@ namespace Nova.Threading
         /// <summary>
         /// A queue will be created if necessairy.
         /// </summary>
-        EnterStep = 1 << 1,
+        Creational = 1 << 1,
 
         /// <summary>
         /// The queue will be terminated after finishing this task. This is also blocking per definition.
         /// </summary>
-        LeaveStep = 1 << 2 | Blocking,
+        Terminating = 1 << 2 | Blocking,
 
         /// <summary>
         /// A blocking action. New actions won't be queued until this action has finished executing.

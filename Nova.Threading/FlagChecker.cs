@@ -57,8 +57,8 @@ namespace Nova.Threading
             ActionFlags flags;
             if (!Cache.TryGetValue(type, out flags))
             {
-                if (type.IsDefined(typeof(EnterStepAttribute))) flags |= ActionFlags.EnterStep;
-                if (type.IsDefined(typeof(LeaveStepAttribute))) flags |= ActionFlags.LeaveStep;
+                if (type.IsDefined(typeof(EnterStepAttribute))) flags |= ActionFlags.Creational;
+                if (type.IsDefined(typeof(LeaveStepAttribute))) flags |= ActionFlags.Terminating;
                 if (type.IsDefined(typeof(BlockingAttribute))) flags |= ActionFlags.Blocking;
 
                 Cache.Add(type, flags);
