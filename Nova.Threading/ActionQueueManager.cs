@@ -17,8 +17,9 @@
 // 
 
 #endregion
+
 using System;
-using System.Diagnostics;
+using System.Threading;
 
 namespace Nova.Threading
 {
@@ -27,10 +28,8 @@ namespace Nova.Threading
     /// </summary>
     public class ActionQueueManager : IActionQueueManager
     {
-        internal static TraceSource TraceSource = new TraceSource("Nova.Threading");
-
-        private readonly object _QueueLock = new object();
         private bool _Disposed;
+        private readonly Mutex _QueueLock;
         private readonly ActionQueueCollection _Queues;
 
         /// <summary>
@@ -38,6 +37,7 @@ namespace Nova.Threading
         /// </summary>
         public ActionQueueManager()
         {
+            _QueueLock = new Mutex();
             _Queues = new ActionQueueCollection();
         }
 
@@ -51,7 +51,7 @@ namespace Nova.Threading
             lock (_QueueLock)
             {
                 ActionQueue queue;
-                if (_Queues.TryGetValue(action.SessionID, action.QueueID, out queue))
+                if (_Queues.TryGetValue(action.ID, out queue))
                 {
                     queue.Enqueue(action);
                     return;
@@ -81,11 +81,8 @@ namespace Nova.Threading
             {
                 var queue = sender as ActionQueue;
 
-                if (queue == null)
-                {
-                    var found = _Queues.TryGetValue(e.SessionID, e.QueueID, out queue);
-                    if (!found) return; //Sender was null or not an ActionQueue and the id's were not found in our storage.
-                }
+                if (queue == null && !_Queues.TryGetValue(e.ID, out queue))
+                    return; //Sender was null or not an ActionQueue and the Queue id was not found in our storage.
 
                 queue.Dispose();
                 _Queues.Remove(queue);

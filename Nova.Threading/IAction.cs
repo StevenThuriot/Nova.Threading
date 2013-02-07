@@ -20,26 +20,18 @@ using System;
 
 namespace Nova.Threading
 {
-    /// <summary>
-    /// The Action Interface used for queueing actions.
-    /// </summary>
-    public interface IAction
+	/// <summary>
+	/// The Action Interface used for queueing actions.
+	/// </summary>
+	public interface IAction
     {
         /// <summary>
-        /// Gets the session ID.
+        /// Gets the ID.
         /// </summary>
         /// <value>
-        /// The session ID.
+        /// The ID.
         /// </value>
-        Guid SessionID { get; }
-
-        /// <summary>
-        /// Gets the queue ID.
-        /// </summary>
-        /// <value>
-        /// The queue ID.
-        /// </value>
-        Guid QueueID { get; }
+        Guid ID { get; }
 
         /// <summary>
         /// Gets or sets the options.
@@ -58,21 +50,40 @@ namespace Nova.Threading
         /// Creates a continuation that executes when the target completes.
         /// </summary>
         /// <param name="action">The action.</param>
+        /// <param name="mainThread">True if the continuation executes on the main thread.</param>
         /// <returns></returns>
-        IAction ContinueWith(Action action);
+        IAction ContinueWith(Action action, bool mainThread = false);
 
         /// <summary>
         /// Creates a continuation that executes when the target completes.
         /// </summary>
-        /// <param name="action">The action.</param>
+        /// <param name="action">The function.</param>
+        /// <param name="mainThread">True if the continuation executes on the main thread.</param>
         /// <returns></returns>
-        IAction ContinueOnMainThreadWith(Action action);
-
+        IAction ContinueWith(Func<bool, bool> action, bool mainThread = false);
 
         /// <summary>
         /// Exception handler for this action.
         /// </summary>
         /// <param name="action">The action.</param>
         void HandleException(Action<Exception> action);
+
+        /// <summary>
+        /// Specifies the Can Excute logic.
+        /// This can only be set once.
+        /// </summary>
+        /// <param name="action">The action.</param>
+        /// <param name="mainThread">True if the continuation executes on the main thread.</param>
+        /// <returns></returns>
+        IAction CanExecute(Func<bool> action, bool mainThread = true);
+
+        /// <summary>
+        /// Specifies the Finishing logic.
+        /// This can only be set once.
+        /// </summary>
+        /// <param name="action">The action.</param>
+        /// <param name="mainThread">True if the continuation executes on the main thread.</param>
+        /// <returns></returns>
+	    IAction FinishWith(Action action, bool mainThread = false);
     }
 }

@@ -27,29 +27,20 @@ namespace Nova.Threading
     internal class ActionQueueEventArgs : EventArgs
     {
         /// <summary>
-        /// Gets the session ID.
-        /// </summary>
-        /// <value>
-        /// The session ID.
-        /// </value>
-        public Guid SessionID { get; private set; }
-        /// <summary>
         /// Gets the queue ID.
         /// </summary>
         /// <value>
         /// The queue ID.
         /// </value>
-        public Guid QueueID { get; private set; }
+        public Guid ID { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ActionQueueEventArgs" /> class.
         /// </summary>
-        /// <param name="sessionID">The session ID.</param>
-        /// <param name="queueID">The queue ID.</param>
-        public ActionQueueEventArgs(Guid sessionID, Guid queueID)
+        /// <param name="id">The queue ID.</param>
+        public ActionQueueEventArgs(Guid id)
         {
-            SessionID = sessionID;
-            QueueID = queueID;
+            ID = id;
         }
     }
 }

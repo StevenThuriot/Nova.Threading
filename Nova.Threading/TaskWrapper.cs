@@ -27,15 +27,27 @@ namespace Nova.Threading
     public static class TaskWrapper
     {
         /// <summary>
-        /// Wraps the specified action into an IAction.
+        /// Wraps the specified function into an IAction.
         /// </summary>
-        /// <param name="action">The action.</param>
-        /// <param name="sessionID">The session ID.</param>
-        /// <param name="queueID">The queue ID.</param>
+        /// <param name="action">The function.</param>
+        /// <param name="id">The ID.</param>
+        /// <param name="mainThread">Indicates whether this action starts executing on the main thread.</param>
         /// <returns></returns>
-        public static IAction Wrap(this Action action, Guid sessionID, Guid queueID)
+        public static IAction Wrap(this Action action, Guid id, bool mainThread = false)
         {
-            return new WrappedTask(sessionID, queueID, action);
+            return new WrappedTask(id, action, mainThread);
+        }
+
+        /// <summary>
+        /// Wraps the specified function into an IAction.
+        /// </summary>
+        /// <param name="function">The function.</param>
+        /// <param name="id">The ID.</param>
+        /// <param name="mainThread">Indicates whether this action starts executing on the main thread.</param>
+        /// <returns></returns>
+        public static IAction Wrap(this Func<bool> function, Guid id, bool mainThread = false)
+        {
+            return new WrappedTask(id, function, mainThread);
         }
     }
 }

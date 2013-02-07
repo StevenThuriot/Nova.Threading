@@ -28,6 +28,9 @@ namespace Nova.Threading
     /// </summary>
     internal class ActionQueue : IDisposable
     {
+        /// <summary>
+        /// The default wait timeout
+        /// </summary>
         public readonly static TimeSpan DefaultWaitTimeout = TimeSpan.FromMilliseconds(250);
 
         private bool _Disposed;
@@ -40,32 +43,22 @@ namespace Nova.Threading
         /// Occurs when this queue needs to be cleaned up.
         /// </summary>
         public event EventHandler<ActionQueueEventArgs> CleanUpQueue;
-
-        /// <summary>
-        /// Gets the session ID.
-        /// </summary>
-        /// <value>
-        /// The session ID.
-        /// </value>
-        public Guid SessionID { get; private set; }
-
+        
         /// <summary>
         /// Gets the queue ID.
         /// </summary>
         /// <value>
         /// The queue ID.
         /// </value>
-        public Guid QueueID { get; private set; }
+        public Guid ID { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ActionQueue" /> class.
         /// </summary>
-        /// <param name="sessionID">The session ID.</param>
-        /// <param name="queueID">The queue ID.</param>
-        public ActionQueue(Guid sessionID, Guid queueID)
+        /// <param name="id">The queue ID.</param>
+        public ActionQueue(Guid id)
         {
-            SessionID = sessionID;
-            QueueID = queueID;
+            ID = id;
 
             _Mutex = new Mutex();
 
@@ -86,7 +79,7 @@ namespace Nova.Threading
         /// </summary>
         /// <param name="action">The action.</param>
         public ActionQueue(IAction action)
-            : this(action.SessionID, action.QueueID)
+            : this(action.ID)
         {
             Enqueue(action);
         }
@@ -443,7 +436,7 @@ namespace Nova.Threading
                     _Queue.Complete();
 
                     var handler = _Queue.CleanUpQueue;
-                    if (handler != null) handler(_Queue, new ActionQueueEventArgs(_Queue.SessionID, _Queue.QueueID));
+                    if (handler != null) handler(_Queue, new ActionQueueEventArgs(_Queue.ID));
                 }
             }
 
@@ -467,7 +460,7 @@ namespace Nova.Threading
                 /// <param name="action">The action.</param>
                 protected override void SetStateDependingOn(IAction action)
                 {
-                    //State transaction is no longer allowed.
+                    //State transition is no longer allowed.
                 }
 
                 /// <summary>
