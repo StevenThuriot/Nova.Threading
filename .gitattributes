@@ -20,3 +20,5 @@
 *.PDF	 diff=astextplain
 *.rtf	 diff=astextplain
 *.RTF	 diff=astextplain
+*.nuspec	 diff=astextplain
+*.NUSPEC	 diff=astextplain
