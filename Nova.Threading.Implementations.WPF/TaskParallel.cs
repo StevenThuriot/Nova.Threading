@@ -1,7 +1,7 @@
 ﻿#region License
 
 // 
-//  Copyright 2012 Steven Thuriot
+//  Copyright 2013 Steven Thuriot
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,15 +17,38 @@
 // 
 
 #endregion
+
 using System;
 
-namespace Nova.Threading
+namespace Nova.Threading.Implementations.WPF
 {
     /// <summary>
     /// Helper class to create an instance of IAction.
     /// </summary>
-    public static class TaskWrapper
+    public static class TaskParallel
     {
+        public static IAction Wrap<T>(this T action, Func<T, Guid> id, Func<T, Action> execution, bool mainThread = false)
+        {
+            var idResult = id(action);
+            var executionResult = execution(action);
+
+            var wrappedAction = Wrap(idResult, executionResult, mainThread);
+            wrappedAction.Options = action.GetActionFlags();
+
+            return wrappedAction;
+        }
+
+        public static IAction Wrap<T>(this T action, Func<T, Guid> id, Func<T, Func<bool>> execution, bool mainThread = false)
+        {
+            var idResult = id(action);
+            var executionResult = execution(action);
+
+            var wrappedAction = Wrap(idResult, executionResult, mainThread);
+            wrappedAction.Options = action.GetActionFlags();
+
+            return wrappedAction;
+        }
+
         /// <summary>
         /// Wraps the specified function into an IAction.
         /// </summary>
@@ -33,9 +56,9 @@ namespace Nova.Threading
         /// <param name="id">The ID.</param>
         /// <param name="mainThread">Indicates whether this action starts executing on the main thread.</param>
         /// <returns></returns>
-        public static IAction Wrap(this Action action, Guid id, bool mainThread = false)
+        public static IAction Wrap(Guid id, Action action, bool mainThread = false)
         {
-            return new WrappedTask(id, action, mainThread);
+            return new TaskParallelAction(id, action, mainThread);
         }
 
         /// <summary>
@@ -45,9 +68,9 @@ namespace Nova.Threading
         /// <param name="id">The ID.</param>
         /// <param name="mainThread">Indicates whether this action starts executing on the main thread.</param>
         /// <returns></returns>
-        public static IAction Wrap(this Func<bool> function, Guid id, bool mainThread = false)
+        public static IAction Wrap(Guid id, Func<bool> function, bool mainThread = false)
         {
-            return new WrappedTask(id, function, mainThread);
+            return new TaskParallelAction(id, function, mainThread);
         }
     }
 }

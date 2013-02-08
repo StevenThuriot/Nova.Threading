@@ -1,7 +1,7 @@
 ﻿#region License
 
 // 
-//  Copyright 2012 Steven Thuriot
+//  Copyright 2013 Steven Thuriot
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,69 +20,78 @@
 
 using System;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Threading;
 
-namespace Nova.Threading
+namespace Nova.Threading.Implementations.WPF
 {
     /// <summary>
     ///     An internal class for IAction that uses the TPL.
     /// </summary>
-    internal class WrappedTask : IAction
+    internal class TaskParallelAction : IAction
     {
-        private readonly Task<bool> _InitTask; //Need this to start execution
         private readonly bool _StartOnMainThread;
+
         private readonly TaskScheduler _UISheduler;
+
         private Func<bool> _CanExecute;
         private bool _CanExecuteRunsOnMainThread;
+
         private Action _Finish;
         private bool _FinishRunsOnMainThread;
+
         private Action<Exception> _HandleException;
-        private Task<bool> _LastContinuationTask; //Need this for continuations
+
+        private readonly Task<bool> _InitTask; //Need this to start execution.
+        private Task<bool> _LastContinuationTask; //Need this for continuations.
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="WrappedTask" /> class.
+        ///     Initializes a new instance of the <see cref="TaskParallelAction" /> class.
         /// </summary>
         /// <param name="id">The ID.</param>
         /// <param name="startOnMainThread">Bool indicating if the first task runs on the main thread.</param>
-        private WrappedTask(Guid id, bool startOnMainThread)
+        private TaskParallelAction(Guid id, bool startOnMainThread)
         {
             ID = id;
 
             _StartOnMainThread = startOnMainThread;
 
-            //TODO: Replace with dispatcher in seperate project so we don't have any WPF references in this one.
-            //This will work, for now, since all actions are created on the GUI Thread.
-            _UISheduler = TaskScheduler.FromCurrentSynchronizationContext();
+            var dispatcher = Application.Current.Dispatcher;
+
+            _UISheduler = dispatcher.CheckAccess()
+                              ? TaskScheduler.FromCurrentSynchronizationContext()
+                              : dispatcher.Invoke(() => TaskScheduler.FromCurrentSynchronizationContext(), DispatcherPriority.Send);
         }
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="WrappedTask" /> class.
+        ///     Initializes a new instance of the <see cref="TaskParallelAction" /> class.
         /// </summary>
         /// <param name="id">The ID.</param>
         /// <param name="action">The function.</param>
         /// <param name="startOnMainThread">Bool indicating if the first task runs on the main thread.</param>
-        public WrappedTask(Guid id, Action action, bool startOnMainThread = false)
+        public TaskParallelAction(Guid id, Action action, bool startOnMainThread)
             : this(id, startOnMainThread)
         {
             if (action == null)
                 throw new ArgumentNullException("action");
 
             var initialAction = new Func<bool>(() =>
-                {
-                    action();
-                    return true;
-                });
+            {
+                action();
+                return true;
+            });
 
             _InitTask = new Task<bool>(initialAction);
             _LastContinuationTask = _InitTask;
         }
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="WrappedTask" /> class.
+        ///     Initializes a new instance of the <see cref="TaskParallelAction" /> class.
         /// </summary>
         /// <param name="id">The ID.</param>
         /// <param name="function">The function.</param>
         /// <param name="startOnMainThread">Bool indicating if the first task runs on the main thread.</param>
-        public WrappedTask(Guid id, Func<bool> function, bool startOnMainThread = false)
+        public TaskParallelAction(Guid id, Func<bool> function, bool startOnMainThread)
             : this(id, startOnMainThread)
         {
             if (function == null)
@@ -115,7 +124,16 @@ namespace Nova.Threading
         {
             if (_HandleException != null)
             {
-                _LastContinuationTask = _LastContinuationTask.ContinueWith<bool>(HandleException);
+                _LastContinuationTask = _LastContinuationTask.ContinueWith(x =>
+                    {
+                        if (TaskHasException(x))
+                        {
+                            _HandleException(x.Exception);
+                            return true;
+                        }
+
+                        return false;
+                    });
             }
 
             ExecuteTask();
@@ -175,10 +193,10 @@ namespace Nova.Threading
                 throw new ArgumentNullException("action");
 
             var func = new Func<bool, bool>(x =>
-                {
-                    action();
-                    return true;
-                });
+            {
+                action();
+                return true;
+            });
 
             return ContinueWith(func, mainThread);
         }
@@ -249,15 +267,15 @@ namespace Nova.Threading
         {
             var canExecuteSheduler = _CanExecuteRunsOnMainThread ? _UISheduler : TaskScheduler.Default;
 
-            var task = Task.Factory.StartNew(_CanExecute, Task.Factory.CancellationToken,
-                                              TaskCreationOptions.HideScheduler, canExecuteSheduler)
-                            .ContinueWith(x =>
+            var task = Task.Factory
+                           .StartNew(_CanExecute, Task.Factory.CancellationToken, TaskCreationOptions.HideScheduler, canExecuteSheduler)
+                           .ContinueWith(x =>
                                 {
                                     if (!x.IsCompleted || x.IsFaulted || x.IsCanceled || !x.Result) return;
 
                                     _InitTask.Start(scheduler);
                                     _LastContinuationTask.Wait();
-                                });
+                                }, TaskContinuationOptions.HideScheduler);
 
             if (_Finish != null)
             {
@@ -267,32 +285,18 @@ namespace Nova.Threading
 
             if (_HandleException != null)
             {
-                task.ContinueWith(HandleException);
+                task.ContinueWith(x => { if (TaskHasException(x)) _HandleException(x.Exception); });
             }
         }
 
         /// <summary>
-        ///     Handles the exception for the passed task.
+        /// Checks if an exception occurred in the passed task.
         /// </summary>
         /// <param name="task">The task.</param>
-        private void HandleException(Task task)
+        /// <returns>True if an exception occurred.</returns>
+        private static bool TaskHasException(Task task)
         {
-            if (!task.IsFaulted && task.Exception == null) return;
-
-            _HandleException(task.Exception);
-        }
-
-        /// <summary>
-        ///     Handles the exception for the passed task.
-        /// </summary>
-        /// <param name="task">The task.</param>
-        private bool HandleException(Task<bool> task)
-        {
-            if (!task.IsFaulted && task.Exception == null) return true;
-
-            _HandleException(task.Exception);
-
-            return false;
+            return task.IsFaulted || task.Exception == null;
         }
     }
 }
