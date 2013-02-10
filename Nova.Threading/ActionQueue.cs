@@ -75,16 +75,6 @@ namespace Nova.Threading
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ActionQueue" /> class.
-        /// </summary>
-        /// <param name="action">The action.</param>
-        public ActionQueue(IAction action)
-            : this(action.ID)
-        {
-            Enqueue(action);
-        }
-
-        /// <summary>
         /// Enqueues the specified action.
         /// </summary>
         /// <param name="action">The action.</param>

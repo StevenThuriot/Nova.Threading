@@ -45,7 +45,7 @@ namespace Nova.Threading
 
             var queueBlock = new ActionBlock<IAction>(x => InternalQueue(x));
             var unqueuedBlock = new ActionBlock<IAction>(x => Task.Run(() => x.Execute()));
-
+            
             _Dataflow = new BufferBlock<IAction>();
             _Dataflow.LinkTo(unqueuedBlock, action => action.Options.CheckFlags(ActionFlags.Unqueued));
             _Dataflow.LinkTo(queueBlock);
@@ -70,10 +70,12 @@ namespace Nova.Threading
                 if (action.Options.CheckFlags(ActionFlags.Creational))
                 {
                     //Create new Queue on Creational Actions when it doesn't exist yet.
-                    queue = new ActionQueue(action);
+                    queue = new ActionQueue(action.ID);
                     queue.CleanUpQueue += CleanUpQueue;
-
+                    
                     _Queues.Add(queue);
+
+                    queue.Enqueue(action);
                 }
 
                 //No queue present, discarding action.
