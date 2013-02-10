@@ -20,6 +20,7 @@
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Nova.Threading
 {
@@ -48,8 +49,18 @@ namespace Nova.Threading
         /// <param name="action">The action.</param>
         public void Queue(IAction action)
         {
+            if (action == null)
+                throw new ArgumentNullException("action");
+
             lock (_QueueLock)
             {
+                if (action.Options.CheckFlags(ActionFlags.Unqueued))
+                {
+                    //Unqueued action, fire and forget!
+                    Task.Run(() => action.Execute());
+                    return;
+                }
+
                 ActionQueue queue;
                 if (_Queues.TryGetValue(action.ID, out queue))
                 {

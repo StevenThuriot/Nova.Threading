@@ -45,6 +45,11 @@ namespace Nova.Threading
         /// <summary>
         /// A blocking action. New actions won't be queued until this action has finished executing.
         /// </summary>
-        Blocking = 1 << 3
+        Blocking = 1 << 3,
+
+        /// <summary>
+        /// This action will run unqueued. (Fire and forget)
+        /// </summary>
+        Unqueued = 1 << 4
     }
 }

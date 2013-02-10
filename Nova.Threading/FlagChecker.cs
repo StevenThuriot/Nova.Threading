@@ -57,9 +57,10 @@ namespace Nova.Threading
             ActionFlags flags;
             if (!Cache.TryGetValue(type, out flags))
             {
-                if (type.IsDefined(typeof(EnterStepAttribute))) flags |= ActionFlags.Creational;
-                if (type.IsDefined(typeof(LeaveStepAttribute))) flags |= ActionFlags.Terminating;
+                if (type.IsDefined(typeof(CreationalAttribute))) flags |= ActionFlags.Creational;
+                if (type.IsDefined(typeof(TerminatingAttribute))) flags |= ActionFlags.Terminating;
                 if (type.IsDefined(typeof(BlockingAttribute))) flags |= ActionFlags.Blocking;
+                if (type.IsDefined(typeof(UnqueuedAttribute))) flags |= ActionFlags.Unqueued;
 
                 Cache.Add(type, flags);
             }

@@ -21,13 +21,27 @@ using System;
 
 namespace Nova.Threading
 {
+    /// <summary>
+    /// A queue will be created if necessairy.
+    /// </summary>
     [AttributeUsage(AttributeTargets.Class)]
-    public class EnterStepAttribute : Attribute { }
+    public class CreationalAttribute : Attribute { }
 
+    /// <summary>
+    /// The queue will be terminated after finishing this task. This is also blocking per definition.
+    /// </summary>
     [AttributeUsage(AttributeTargets.Class)]
-    public class LeaveStepAttribute : Attribute { }
+    public class TerminatingAttribute : Attribute { }
 
+    /// <summary>
+    /// A blocking action. New actions won't be queued until this action has finished executing.
+    /// </summary>
     [AttributeUsage(AttributeTargets.Class)]
     public class BlockingAttribute : Attribute { }
 
+    /// <summary>
+    /// This action will run unqueued. (Fire and forget)
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Class)]
+    public class UnqueuedAttribute : Attribute { }
 }
