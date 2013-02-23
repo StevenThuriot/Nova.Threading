@@ -44,13 +44,15 @@ namespace Nova.Threading.Implementations.WPF
 
         private readonly Task<bool> _InitTask; //Need this to start execution.
         private Task<bool> _LastContinuationTask; //Need this for continuations.
+        private Func<bool> _Successfully;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="TaskParallelAction" /> class.
         /// </summary>
         /// <param name="id">The ID.</param>
         /// <param name="startOnMainThread">Bool indicating if the first task runs on the main thread.</param>
-        private TaskParallelAction(Guid id, bool startOnMainThread)
+        /// <param name="successful">Returns <c>true</c> if this action ran succesfully.</param>
+        private TaskParallelAction(Guid id, bool startOnMainThread, Func<bool> successful)
         {
             ID = id;
 
@@ -61,6 +63,8 @@ namespace Nova.Threading.Implementations.WPF
             _UISheduler = dispatcher.CheckAccess()
                               ? TaskScheduler.FromCurrentSynchronizationContext()
                               : dispatcher.Invoke(() => TaskScheduler.FromCurrentSynchronizationContext(), DispatcherPriority.Send);
+
+            _Successfully = successful;
         }
 
         /// <summary>
@@ -69,8 +73,9 @@ namespace Nova.Threading.Implementations.WPF
         /// <param name="id">The ID.</param>
         /// <param name="action">The function.</param>
         /// <param name="startOnMainThread">Bool indicating if the first task runs on the main thread.</param>
-        public TaskParallelAction(Guid id, Action action, bool startOnMainThread)
-            : this(id, startOnMainThread)
+        /// <param name="successful">Returns <c>true</c> if this action ran succesfully.</param>
+        public TaskParallelAction(Guid id, Action action, bool startOnMainThread, Func<bool> successful)
+            : this(id, startOnMainThread, successful)
         {
             if (action == null)
                 throw new ArgumentNullException("action");
@@ -91,8 +96,9 @@ namespace Nova.Threading.Implementations.WPF
         /// <param name="id">The ID.</param>
         /// <param name="function">The function.</param>
         /// <param name="startOnMainThread">Bool indicating if the first task runs on the main thread.</param>
-        public TaskParallelAction(Guid id, Func<bool> function, bool startOnMainThread)
-            : this(id, startOnMainThread)
+        /// <param name="successful">Returns <c>true</c> if this action ran succesfully.</param>
+        public TaskParallelAction(Guid id, Func<bool> function, bool startOnMainThread, Func<bool> successful)
+            : this(id, startOnMainThread, successful)
         {
             if (function == null)
                 throw new ArgumentNullException("function");
@@ -179,6 +185,17 @@ namespace Nova.Threading.Implementations.WPF
             _FinishRunsOnMainThread = mainThread;
 
             return this;
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether this instance ran succesfully.
+        /// </summary>
+        /// <value>
+        /// <c>true</c> if this instance ran succesfully; otherwise, <c>false</c>.
+        /// </value>
+        public bool IsSuccesfull
+        {
+            get { return _Successfully == null || _Successfully(); }
         }
 
         /// <summary>
@@ -297,6 +314,20 @@ namespace Nova.Threading.Implementations.WPF
         private static bool TaskHasException(Task task)
         {
             return task.IsFaulted || task.Exception == null;
+        }
+
+        /// <summary>
+        /// Gets the success state.
+        /// </summary>
+        /// <returns></returns>
+        public async Task<bool> GetSuccessAsync()
+        {
+            return await _LastContinuationTask.ContinueWith(x => ReturnSuccessState(x));
+        }
+
+        private bool ReturnSuccessState(Task<bool> x)
+        {
+            return x != null && x.IsCompleted && !x.IsFaulted && !x.IsCanceled && x.Result && IsSuccesfull;
         }
     }
 }

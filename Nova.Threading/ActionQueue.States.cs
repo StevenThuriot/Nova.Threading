@@ -294,19 +294,34 @@ namespace Nova.Threading
                 /// <returns></returns>
                 protected override bool EnqueueAction(IAction action)
                 {
-                    action.ContinueWith(FinalizeQueue);
+                    action.ContinueWith(() => FinalizeQueue(action));
                     return _Queue._ActionBlock.Post(action);
                 }
 
                 /// <summary>
                 /// Signals to the dataflow block that it shouldn't accept or produce any more messages and shouldn't consume any more postponed messages.
                 /// </summary>
-                private void FinalizeQueue()
+                /// <param name="action">The action.</param>
+                /// <returns></returns>
+                private bool FinalizeQueue(IAction action)
                 {
-                    _Queue.Complete();
+                    if (action.IsSuccesfull)
+                    {
+                        _Queue.Complete();
 
-                    var handler = _Queue.CleanUpQueue;
-                    if (handler != null) handler(_Queue, new ActionQueueEventArgs(_Queue.ID));
+                        var handler = _Queue.CleanUpQueue;
+                        if (handler != null) handler(_Queue, new ActionQueueEventArgs(_Queue.ID));
+
+                        return true;
+                    }
+                    
+                    //Execution failed, reset queue to running.
+                    lock (_Queue._Mutex)
+                    {
+                        _Queue._State = new RunningActionQueueState(_Queue);
+                    }
+
+                    return false;
                 }
             }
 

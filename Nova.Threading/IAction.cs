@@ -85,5 +85,13 @@ namespace Nova.Threading
         /// <param name="mainThread">True if the continuation executes on the main thread.</param>
         /// <returns></returns>
 	    IAction FinishWith(Action action, bool mainThread = false);
+
+        /// <summary>
+        /// Gets a value indicating whether this instance ran succesfully.
+        /// </summary>
+        /// <value>
+        /// <c>true</c> if this instance ran succesfully; otherwise, <c>false</c>.
+        /// </value>
+        bool IsSuccesfull { get; }
     }
 }

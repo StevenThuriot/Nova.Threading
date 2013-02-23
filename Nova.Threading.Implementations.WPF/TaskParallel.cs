@@ -19,6 +19,7 @@
 #endregion
 
 using System;
+using System.Threading.Tasks;
 
 namespace Nova.Threading.Implementations.WPF
 {
@@ -27,23 +28,43 @@ namespace Nova.Threading.Implementations.WPF
     /// </summary>
     public static class TaskParallel
     {
-        public static IAction Wrap<T>(this T action, Func<T, Guid> id, Func<T, Action> execution, bool mainThread = false)
+        /// <summary>
+        /// Wraps the specified action.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="action">The action.</param>
+        /// <param name="id">The id.</param>
+        /// <param name="execution">Gets the execution action.</param>
+        /// <param name="successful">Returns <c>true</c> if this action ran succesfully.</param>
+        /// <param name="mainThread">Indicates whether this action starts executing on the main thread.</param>
+        /// <returns></returns>
+        public static IAction Wrap<T>(this T action, Func<T, Guid> id, Func<T, Action> execution, Func<bool> successful = null, bool mainThread = false)
         {
             var idResult = id(action);
             var executionResult = execution(action);
 
-            var wrappedAction = Wrap(idResult, executionResult, mainThread);
+            var wrappedAction = Wrap(idResult, executionResult, successful, mainThread);
             wrappedAction.Options = action.GetActionFlags();
 
             return wrappedAction;
         }
 
-        public static IAction Wrap<T>(this T action, Func<T, Guid> id, Func<T, Func<bool>> execution, bool mainThread = false)
+        /// <summary>
+        /// Wraps the specified action.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="action">The action.</param>
+        /// <param name="id">The id.</param>
+        /// <param name="execution">The execution.</param>
+        /// <param name="successful">Returns <c>true</c> if this action ran succesfully.</param>
+        /// <param name="mainThread">Indicates whether this action starts executing on the main thread.</param>
+        /// <returns></returns>
+        public static IAction Wrap<T>(this T action, Func<T, Guid> id, Func<T, Func<bool>> execution, Func<bool> successful = null, bool mainThread = false)
         {
             var idResult = id(action);
             var executionResult = execution(action);
 
-            var wrappedAction = Wrap(idResult, executionResult, mainThread);
+            var wrappedAction = Wrap(idResult, executionResult, successful, mainThread);
             wrappedAction.Options = action.GetActionFlags();
 
             return wrappedAction;
@@ -52,25 +73,42 @@ namespace Nova.Threading.Implementations.WPF
         /// <summary>
         /// Wraps the specified function into an IAction.
         /// </summary>
+        /// <param name="id">The ID.</param>
         /// <param name="action">The function.</param>
-        /// <param name="id">The ID.</param>
+        /// <param name="successful">Returns <c>true</c> if this action ran succesfully.</param>
         /// <param name="mainThread">Indicates whether this action starts executing on the main thread.</param>
         /// <returns></returns>
-        public static IAction Wrap(Guid id, Action action, bool mainThread = false)
+        public static IAction Wrap(Guid id, Action action, Func<bool> successful = null, bool mainThread = false)
         {
-            return new TaskParallelAction(id, action, mainThread);
+            return new TaskParallelAction(id, action, mainThread, successful);
         }
 
         /// <summary>
         /// Wraps the specified function into an IAction.
         /// </summary>
-        /// <param name="function">The function.</param>
         /// <param name="id">The ID.</param>
+        /// <param name="function">The function.</param>
+        /// <param name="successful">Returns <c>true</c> if this action ran succesfully.</param>
         /// <param name="mainThread">Indicates whether this action starts executing on the main thread.</param>
         /// <returns></returns>
-        public static IAction Wrap(Guid id, Func<bool> function, bool mainThread = false)
+        public static IAction Wrap(Guid id, Func<bool> function, Func<bool> successful = null, bool mainThread = false)
         {
-            return new TaskParallelAction(id, function, mainThread);
+            return new TaskParallelAction(id, function, mainThread, successful);
+        }
+
+        /// <summary>
+        /// Gets the success state.
+        /// </summary>
+        /// <param name="action">The action.</param>
+        /// <returns></returns>
+        /// <exception cref="System.NotSupportedException">This type of action is not supported</exception>
+        public static async Task<bool> GetSuccessAsync(this IAction action)
+        {
+            var taskParallelAction = action as TaskParallelAction;
+            if (taskParallelAction == null)
+                throw new NotSupportedException("This type of action is not supported. Nova.Threading.Implementations.WPF only supports TPL actions.");
+
+            return await taskParallelAction.GetSuccessAsync();
         }
     }
 }
