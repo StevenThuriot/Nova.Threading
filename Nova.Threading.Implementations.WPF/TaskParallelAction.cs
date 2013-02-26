@@ -44,7 +44,7 @@ namespace Nova.Threading.Implementations.WPF
 
         private readonly Task<bool> _InitTask; //Need this to start execution.
         private Task<bool> _LastContinuationTask; //Need this for continuations.
-        private Func<bool> _Successfully;
+        private readonly Func<bool> _Successfully;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="TaskParallelAction" /> class.
@@ -322,7 +322,10 @@ namespace Nova.Threading.Implementations.WPF
         /// <returns></returns>
         public async Task<bool> GetSuccessAsync()
         {
-            return await _LastContinuationTask.ContinueWith(x => ReturnSuccessState(x));
+            var task = _LastContinuationTask.ContinueWith(x => ReturnSuccessState(x));
+            _LastContinuationTask = task;
+
+            return await task;
         }
 
         private bool ReturnSuccessState(Task<bool> x)
