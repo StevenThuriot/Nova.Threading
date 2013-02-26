@@ -18,12 +18,14 @@
 
 #endregion
 
-using System;
 using System.Reflection;
-using System.Runtime.InteropServices;
+using System.Resources;
 
-[assembly: AssemblyTitle("Nova.Threading")]
-[assembly: AssemblyProduct("Nova.Threading")]
-[assembly: ComVisible(false)]
-[assembly: CLSCompliant(true)]
-[assembly: Guid("43fe298d-3f63-48b5-8752-3a302a8260df")]
+[assembly: AssemblyCopyright("Thuriot.be")]
+[assembly: AssemblyDescription("Small graphical framework to quickly start developing your apps without having to worry too much about controls and looks.")]
+[assembly: AssemblyCompany("Steven Thuriot")]
+[assembly: NeutralResourcesLanguage("en")]
+
+[assembly: AssemblyVersion("0.8.0.0")]
+[assembly: AssemblyInformationalVersion("0.8.0.0")]
+[assembly: AssemblyFileVersion("0.8.0.0")]
