@@ -36,7 +36,7 @@ namespace Nova.Threading
         private bool _Disposed;
         private readonly CancellationTokenSource _TokenSource;
         private readonly ActionBlock<IAction> _ActionBlock;
-        private readonly Mutex _Mutex;
+        private readonly object _Lock;
         private ActionQueueState _State;
 
         /// <summary>
@@ -60,7 +60,7 @@ namespace Nova.Threading
         {
             ID = id;
 
-            _Mutex = new Mutex();
+            _Lock = new object();
 
             ActionQueueState.Initialize(this);
 
@@ -88,7 +88,7 @@ namespace Nova.Threading
         /// </summary>
         private void Complete(bool cancelIfNeeded = true)
         {
-            lock (_Mutex)
+            lock (_Lock)
             {
                 _ActionBlock.Complete();
 
@@ -137,7 +137,6 @@ namespace Nova.Threading
                 }
 
                 _TokenSource.Dispose();
-                _Mutex.Dispose();
                 CleanUpQueue = null;
             }
 

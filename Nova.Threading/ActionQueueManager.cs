@@ -19,7 +19,6 @@
 #endregion
 
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 
@@ -31,7 +30,7 @@ namespace Nova.Threading
     public class ActionQueueManager : IActionQueueManager
     {
         private bool _Disposed;
-        private readonly Mutex _QueueLock;
+        private readonly object _QueueLock;
         private readonly ActionQueueCollection _Queues;
         private readonly BufferBlock<IAction> _Dataflow;
 
@@ -40,7 +39,7 @@ namespace Nova.Threading
         /// </summary>
         public ActionQueueManager()
         {
-            _QueueLock = new Mutex();
+            _QueueLock = new object();
             _Queues = new ActionQueueCollection();
 
             var queueBlock = new ActionBlock<IAction>(x => InternalQueue(x));

@@ -48,7 +48,7 @@ namespace Nova.Threading
             /// <param name="actionQueue">The action queue</param>
             public static void Initialize(ActionQueue actionQueue)
             {
-                lock (actionQueue._Mutex)
+                lock (actionQueue._Lock)
                 {
                     actionQueue._State = new RunningActionQueueState(actionQueue);
                 }
@@ -60,7 +60,7 @@ namespace Nova.Threading
             /// <param name="actionQueue">The action queue</param>
             public static void SetAsDisposed(ActionQueue actionQueue)
             {
-                lock (actionQueue._Mutex)
+                lock (actionQueue._Lock)
                 {
                     actionQueue._State = new DisposedActionQueueState(actionQueue);
                 }
@@ -73,7 +73,7 @@ namespace Nova.Threading
             /// <returns>True if the action was queued.</returns>
             public bool Enqueue(IAction action)
             {
-                lock (_Queue._Mutex)
+                lock (_Queue._Lock)
                 {
                     SetStateDependingOn(action);
                     return _Queue._State.EnqueueAction(action);
@@ -219,7 +219,7 @@ namespace Nova.Threading
                 /// </summary>
                 private void ResetQueue()
                 {
-                    lock (_Queue._Mutex)
+                    lock (_Queue._Lock)
                     {
                         _Queue._State = new RunningActionQueueState(_Queue);
                     }
@@ -316,7 +316,7 @@ namespace Nova.Threading
                     }
                     
                     //Execution failed, reset queue to running.
-                    lock (_Queue._Mutex)
+                    lock (_Queue._Lock)
                     {
                         _Queue._State = new RunningActionQueueState(_Queue);
                     }
