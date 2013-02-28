@@ -38,12 +38,18 @@ namespace Nova.Threading.Implementations.WPF
         /// <param name="successful">Returns <c>true</c> if this action ran succesfully.</param>
         /// <param name="mainThread">Indicates whether this action starts executing on the main thread.</param>
         /// <returns></returns>
-        public static IAction Wrap<T>(this T action, Func<T, Guid> id, Func<T, Action> execution, Func<bool> successful = null, bool mainThread = false)
+        public static IAction Wrap<T>(this T action, Func<T, Guid> id, Func<T, Action> execution, Func<T, Func<bool>> successful = null, bool mainThread = false)
         {
             var idResult = id(action);
             var executionResult = execution(action);
 
-            var wrappedAction = Wrap(idResult, executionResult, successful, mainThread);
+            Func<bool> successfulResult = null;
+            if (successful != null)
+            {
+                successfulResult = successful(action);
+            }
+
+            var wrappedAction = Wrap(idResult, executionResult, successfulResult, mainThread);
             wrappedAction.Options = action.GetActionFlags();
 
             return wrappedAction;
@@ -59,12 +65,18 @@ namespace Nova.Threading.Implementations.WPF
         /// <param name="successful">Returns <c>true</c> if this action ran succesfully.</param>
         /// <param name="mainThread">Indicates whether this action starts executing on the main thread.</param>
         /// <returns></returns>
-        public static IAction Wrap<T>(this T action, Func<T, Guid> id, Func<T, Func<bool>> execution, Func<bool> successful = null, bool mainThread = false)
+        public static IAction Wrap<T>(this T action, Func<T, Guid> id, Func<T, Func<bool>> execution, Func<T, Func<bool>> successful = null, bool mainThread = false)
         {
             var idResult = id(action);
             var executionResult = execution(action);
 
-            var wrappedAction = Wrap(idResult, executionResult, successful, mainThread);
+            Func<bool> successfulResult = null;
+            if (successful != null)
+            {
+                successfulResult = successful(action);
+            }
+
+            var wrappedAction = Wrap(idResult, executionResult, successfulResult, mainThread);
             wrappedAction.Options = action.GetActionFlags();
 
             return wrappedAction;
