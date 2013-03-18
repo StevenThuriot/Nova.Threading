@@ -66,7 +66,7 @@ namespace Nova.Threading
         /// Exception handler for this action.
         /// </summary>
         /// <param name="action">The action.</param>
-        void HandleException(Action<Exception> action);
+        IAction HandleException(Action<Exception> action);
 
         /// <summary>
         /// Specifies the Can Excute logic.

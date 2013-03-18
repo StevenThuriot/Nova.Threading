@@ -130,16 +130,7 @@ namespace Nova.Threading.Implementations.WPF
         {
             if (_HandleException != null)
             {
-                _LastContinuationTask = _LastContinuationTask.ContinueWith(x =>
-                    {
-                        if (TaskHasException(x))
-                        {
-                            _HandleException(x.Exception);
-                            return true;
-                        }
-
-                        return false;
-                    });
+                _LastContinuationTask = _LastContinuationTask.ContinueWith(x => Handle(x));
             }
 
             ExecuteTask();
@@ -239,12 +230,13 @@ namespace Nova.Threading.Implementations.WPF
         }
 
         /// <summary>
-        ///     Handles the exception of the previous task.
+        /// Handles the exception of the previous task.
         /// </summary>
         /// <param name="action">The function.</param>
         /// <returns></returns>
-        /// <exception cref="System.NotImplementedException"></exception>
-        public void HandleException(Action<Exception> action)
+        /// <exception cref="System.ArgumentNullException">action</exception>
+        /// <exception cref="System.Exception">HandleException can only be set once.</exception>
+        public IAction HandleException(Action<Exception> action)
         {
             if (action == null)
                 throw new ArgumentNullException("action");
@@ -253,6 +245,8 @@ namespace Nova.Threading.Implementations.WPF
                 throw new Exception("HandleException can only be set once.");
 
             _HandleException = action;
+
+            return this;
         }
 
         /// <summary>
@@ -302,8 +296,23 @@ namespace Nova.Threading.Implementations.WPF
 
             if (_HandleException != null)
             {
-                task.ContinueWith(x => { if (TaskHasException(x)) _HandleException(x.Exception); });
+                task.ContinueWith(x => Handle(x));
             }
+        }
+
+        /// <summary>
+        /// Handles the specified task's exception.
+        /// </summary>
+        /// <param name="task">The task.</param>
+        private bool Handle(Task task)
+        {
+            if (!TaskHasException(task)) return false;
+
+            _HandleException(task.Exception);
+
+            task.ContinueWith(x => x.Exception.Handle(_ => true));//Set handled to true to keep the TPL happy.
+
+            return true;
         }
 
         /// <summary>
@@ -313,7 +322,7 @@ namespace Nova.Threading.Implementations.WPF
         /// <returns>True if an exception occurred.</returns>
         private static bool TaskHasException(Task task)
         {
-            return task.IsFaulted || task.Exception == null;
+            return task.IsFaulted || task.Exception != null;
         }
 
         /// <summary>
