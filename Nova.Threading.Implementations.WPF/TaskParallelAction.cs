@@ -306,23 +306,12 @@ namespace Nova.Threading.Implementations.WPF
         /// <param name="task">The task.</param>
         private bool Handle(Task task)
         {
-            if (!TaskHasException(task)) return false;
-
-            _HandleException(task.Exception);
-
-            task.ContinueWith(x => x.Exception.Handle(_ => true));//Set handled to true to keep the TPL happy.
+            if (task.Exception != null)
+            {
+                _HandleException(task.Exception);
+            }
 
             return true;
-        }
-
-        /// <summary>
-        /// Checks if an exception occurred in the passed task.
-        /// </summary>
-        /// <param name="task">The task.</param>
-        /// <returns>True if an exception occurred.</returns>
-        private static bool TaskHasException(Task task)
-        {
-            return task.IsFaulted || task.Exception != null;
         }
 
         /// <summary>
