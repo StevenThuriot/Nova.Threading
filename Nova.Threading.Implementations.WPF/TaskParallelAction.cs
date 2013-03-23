@@ -128,12 +128,25 @@ namespace Nova.Threading.Implementations.WPF
         /// </summary>
         public void Execute()
         {
-            if (_HandleException != null)
+            var scheduler = _StartOnMainThread ? _UISheduler : TaskScheduler.Default;
+            if (_CanExecute == null)
             {
-                _LastContinuationTask = _LastContinuationTask.ContinueWith(x => Handle(x));
-            }
+                if (_Finish != null)
+                {
+                    ContinueWith(x => { _Finish(); return true; }, _FinishRunsOnMainThread);
+                }
 
-            ExecuteTask();
+                if (_HandleException != null)
+                {
+                    _LastContinuationTask.ContinueWith(x => Handle(x), TaskContinuationOptions.NotOnRanToCompletion);
+                }
+
+                _InitTask.Start(scheduler);
+            }
+            else
+            {
+                RunWithCanExecuteLogic(scheduler);
+            }
         }
 
         /// <summary>
@@ -222,9 +235,10 @@ namespace Nova.Threading.Implementations.WPF
 
             var scheduler = mainThread ? _UISheduler : TaskScheduler.Default;
 
-            _LastContinuationTask =
-                _LastContinuationTask.ContinueWith(x => action(x.IsCompleted && !x.IsFaulted && !x.IsCanceled && x.Result),
-                                                        Task.Factory.CancellationToken, TaskContinuationOptions.HideScheduler, scheduler);
+            var cancellationToken = Task.Factory.CancellationToken;
+            Func<Task<bool>, bool> continuationFunction = x => action(x.IsCompleted && x.Result);
+
+            _LastContinuationTask = _LastContinuationTask.ContinueWith(continuationFunction, cancellationToken, TaskContinuationOptions.HideScheduler, scheduler);
 
             return this;
         }
@@ -250,27 +264,6 @@ namespace Nova.Threading.Implementations.WPF
         }
 
         /// <summary>
-        ///     Executes the task.
-        /// </summary>
-        private void ExecuteTask()
-        {
-            var scheduler = _StartOnMainThread ? _UISheduler : TaskScheduler.Default;
-            if (_CanExecute == null)
-            {
-                if (_Finish != null)
-                {
-                    ContinueWith(x => { _Finish(); return true; }, _FinishRunsOnMainThread);
-                }
-
-                _InitTask.Start(scheduler);
-            }
-            else
-            {
-                RunWithCanExecuteLogic(scheduler);
-            }
-        }
-
-        /// <summary>
         ///     Executes the task while keeping the CanExecute logic in mind.
         /// </summary>
         /// <param name="scheduler">The scheduler.</param>
@@ -278,15 +271,14 @@ namespace Nova.Threading.Implementations.WPF
         {
             var canExecuteSheduler = _CanExecuteRunsOnMainThread ? _UISheduler : TaskScheduler.Default;
 
-            var task = Task.Factory
-                           .StartNew(_CanExecute, Task.Factory.CancellationToken, TaskCreationOptions.HideScheduler, canExecuteSheduler)
-                           .ContinueWith(x =>
-                                {
-                                    if (!x.IsCompleted || x.IsFaulted || x.IsCanceled || !x.Result) return;
+            var task = Task.Factory.StartNew(_CanExecute, Task.Factory.CancellationToken, TaskCreationOptions.HideScheduler, canExecuteSheduler)
+                                   .ContinueWith(x =>
+                                    {
+                                        if (!x.Result) return;
 
-                                    _InitTask.Start(scheduler);
-                                    _LastContinuationTask.Wait();
-                                }, TaskContinuationOptions.HideScheduler);
+                                        _InitTask.Start(scheduler);
+                                        _LastContinuationTask.Wait();
+                                    }, TaskContinuationOptions.HideScheduler | TaskContinuationOptions.OnlyOnRanToCompletion);
 
             if (_Finish != null)
             {
@@ -296,7 +288,7 @@ namespace Nova.Threading.Implementations.WPF
 
             if (_HandleException != null)
             {
-                task.ContinueWith(x => Handle(x));
+                task.ContinueWith(x => Handle(x), TaskContinuationOptions.NotOnRanToCompletion);
             }
         }
 
@@ -328,7 +320,7 @@ namespace Nova.Threading.Implementations.WPF
 
         private bool ReturnSuccessState(Task<bool> x)
         {
-            return x != null && x.IsCompleted && !x.IsFaulted && !x.IsCanceled && x.Result && IsSuccesfull;
+            return x != null && x.IsCompleted && x.Result && IsSuccesfull;
         }
     }
 }
