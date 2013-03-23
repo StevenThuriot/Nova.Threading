@@ -131,14 +131,17 @@ namespace Nova.Threading.Implementations.WPF
             var scheduler = _StartOnMainThread ? _UISheduler : TaskScheduler.Default;
             if (_CanExecute == null)
             {
+                Task task = _LastContinuationTask;
+
                 if (_Finish != null)
                 {
-                    ContinueWith(x => { _Finish(); return true; }, _FinishRunsOnMainThread);
+                    var finishSheduler = _FinishRunsOnMainThread ? _UISheduler : TaskScheduler.Default;
+                    task = task.ContinueWith(_ => _Finish(), Task.Factory.CancellationToken, TaskContinuationOptions.HideScheduler, finishSheduler);
                 }
 
                 if (_HandleException != null)
                 {
-                    _LastContinuationTask.ContinueWith(x => Handle(x), TaskContinuationOptions.NotOnRanToCompletion);
+                    task = task.ContinueWith(Handle, TaskContinuationOptions.NotOnRanToCompletion);
                 }
 
                 _InitTask.Start(scheduler);
@@ -146,6 +149,35 @@ namespace Nova.Threading.Implementations.WPF
             else
             {
                 RunWithCanExecuteLogic(scheduler);
+            }
+        }
+
+        /// <summary>
+        /// Executes the task while keeping the CanExecute logic in mind.
+        /// </summary>
+        /// <param name="scheduler">The scheduler.</param>
+        private void RunWithCanExecuteLogic(TaskScheduler scheduler)
+        {
+            var canExecuteSheduler = _CanExecuteRunsOnMainThread ? _UISheduler : TaskScheduler.Default;
+
+            var task = Task.Factory.StartNew(_CanExecute, Task.Factory.CancellationToken, TaskCreationOptions.HideScheduler, canExecuteSheduler)
+                                   .ContinueWith(x =>
+                                   {
+                                       if (!x.Result) return;
+
+                                       _InitTask.Start(scheduler);
+                                       _LastContinuationTask.Wait();
+                                   }, TaskContinuationOptions.HideScheduler | TaskContinuationOptions.OnlyOnRanToCompletion);
+
+            if (_Finish != null)
+            {
+                var finishSheduler = _FinishRunsOnMainThread ? _UISheduler : TaskScheduler.Default;
+                task = task.ContinueWith(_ => _Finish(), Task.Factory.CancellationToken, TaskContinuationOptions.HideScheduler, finishSheduler);
+            }
+
+            if (_HandleException != null)
+            {
+                task = task.ContinueWith(Handle, TaskContinuationOptions.NotOnRanToCompletion);
             }
         }
 
@@ -216,7 +248,7 @@ namespace Nova.Threading.Implementations.WPF
             var func = new Func<bool, bool>(x =>
             {
                 action();
-                return true;
+                return x;
             });
 
             return ContinueWith(func, mainThread);
@@ -264,46 +296,15 @@ namespace Nova.Threading.Implementations.WPF
         }
 
         /// <summary>
-        ///     Executes the task while keeping the CanExecute logic in mind.
-        /// </summary>
-        /// <param name="scheduler">The scheduler.</param>
-        private void RunWithCanExecuteLogic(TaskScheduler scheduler)
-        {
-            var canExecuteSheduler = _CanExecuteRunsOnMainThread ? _UISheduler : TaskScheduler.Default;
-
-            var task = Task.Factory.StartNew(_CanExecute, Task.Factory.CancellationToken, TaskCreationOptions.HideScheduler, canExecuteSheduler)
-                                   .ContinueWith(x =>
-                                    {
-                                        if (!x.Result) return;
-
-                                        _InitTask.Start(scheduler);
-                                        _LastContinuationTask.Wait();
-                                    }, TaskContinuationOptions.HideScheduler | TaskContinuationOptions.OnlyOnRanToCompletion);
-
-            if (_Finish != null)
-            {
-                var finishSheduler = _FinishRunsOnMainThread ? _UISheduler : TaskScheduler.Default;
-                task = task.ContinueWith(_ => _Finish(), Task.Factory.CancellationToken, TaskContinuationOptions.HideScheduler, finishSheduler);
-            }
-
-            if (_HandleException != null)
-            {
-                task.ContinueWith(x => Handle(x), TaskContinuationOptions.NotOnRanToCompletion);
-            }
-        }
-
-        /// <summary>
         /// Handles the specified task's exception.
         /// </summary>
         /// <param name="task">The task.</param>
-        private bool Handle(Task task)
+        private void Handle(Task task)
         {
             if (task.Exception != null)
             {
                 _HandleException(task.Exception);
             }
-
-            return true;
         }
 
         /// <summary>
