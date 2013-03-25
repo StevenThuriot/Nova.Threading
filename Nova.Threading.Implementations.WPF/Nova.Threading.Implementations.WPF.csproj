@@ -38,6 +38,7 @@
     <AssemblyOriginatorKeyFile>..\packages\Thuriot.PFX.1.0.0\lib\Thuriot.pfx</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="System" />
     <Reference Include="System.Core" />

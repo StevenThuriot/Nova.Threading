@@ -21,6 +21,7 @@
 using System;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Threading;
 
 namespace Nova.Threading.Implementations.WPF
@@ -144,6 +145,8 @@ namespace Nova.Threading.Implementations.WPF
                     task = task.ContinueWith(Handle, TaskContinuationOptions.NotOnRanToCompletion);
                 }
 
+                ContinueWithInvalidate(task);
+
                 _InitTask.Start(scheduler);
             }
             else
@@ -179,6 +182,16 @@ namespace Nova.Threading.Implementations.WPF
             {
                 task = task.ContinueWith(Handle, TaskContinuationOptions.NotOnRanToCompletion);
             }
+
+            ContinueWithInvalidate(task);
+        }
+
+        private static void ContinueWithInvalidate(Task task)
+        {
+            var invalidate = new Action(CommandManager.InvalidateRequerySuggested);
+            var dispatch = new Func<object, DispatcherOperation>(_ => Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, invalidate));
+
+            task.ContinueWith(dispatch);
         }
 
         /// <summary>
