@@ -332,9 +332,14 @@ namespace Nova.Threading.Implementations.WPF
             return await task;
         }
 
-        private bool ReturnSuccessState(Task<bool> x)
+        /// <summary>
+        /// Returns if a task was succesful.
+        /// </summary>
+        /// <param name="task">The task.</param>
+        /// <returns></returns>
+        private bool ReturnSuccessState(Task<bool> task)
         {
-            return x != null && x.IsCompleted && x.Result && IsSuccesfull;
+            return task != null && task.IsCompleted && task.Result && IsSuccesfull;
         }
     }
 }

@@ -20,78 +20,71 @@
 
 using System;
 using System.Threading.Tasks;
-using System.Threading.Tasks.Dataflow;
 
 namespace Nova.Threading
-{
-    /// <summary>
+{/// <summary>
     /// The instance that delegates the queued action to the correct ActionQueue.
     /// </summary>
     public class ActionQueueManager : IActionQueueManager
     {
         private bool _Disposed;
-        private readonly object _QueueLock;
+        private readonly object _Lock;
         private readonly ActionQueueCollection _Queues;
-        private readonly BufferBlock<IAction> _Dataflow;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ActionQueueManager" /> class.
         /// </summary>
         public ActionQueueManager()
         {
-            _QueueLock = new object();
+            _Lock = new object();
             _Queues = new ActionQueueCollection();
-
-            var queueBlock = new ActionBlock<IAction>(x => InternalQueue(x));
-            var unqueuedBlock = new ActionBlock<IAction>(x => Task.Run(() => x.Execute()));
-            
-            _Dataflow = new BufferBlock<IAction>();
-            _Dataflow.LinkTo(unqueuedBlock, action => action.Options.CheckFlags(ActionFlags.Unqueued));
-            _Dataflow.LinkTo(queueBlock);
         }
 
         /// <summary>
         /// Queues the specified action.
         /// </summary>
-        /// <remarks>In case the queue does not exist yet, it will create it when queueing a <see cref="ActionFlags.Creational"/> action.</remarks>
         /// <param name="action">The action.</param>
-        private void InternalQueue(IAction action)
+        /// <returns>True if the action was queued.</returns>
+        /// <remarks>
+        /// In case the queue does not exist yet, it will create it when queueing a <see cref="ActionFlags.Creational" /> action.
+        /// </remarks>
+        public bool Enqueue(IAction action)
         {
-            lock (_QueueLock)
+            if (_Disposed) return false;
+
+            if (action == null)
+                throw new ArgumentNullException("action");
+
+            if (action.Options.CheckFlags(ActionFlags.Unqueued))
+            {
+                Task.Run(() => action.Execute());
+                return true;
+            }
+
+            lock (_Lock)
             {
                 ActionQueue queue;
                 if (_Queues.TryGetValue(action.ID, out queue))
                 {
-                    queue.Enqueue(action);
-                    return;
+                    var result = queue.Enqueue(action);
+                    return result;
                 }
-
+                
+                //Create new Queue on Creational Actions when it doesn't exist yet.
                 if (action.Options.CheckFlags(ActionFlags.Creational))
                 {
-                    //Create new Queue on Creational Actions when it doesn't exist yet.
                     queue = new ActionQueue(action.ID);
                     queue.CleanUpQueue += CleanUpQueue;
-                    
+
                     _Queues.Add(queue);
 
-                    queue.Enqueue(action);
+                    var result = queue.Enqueue(action);
+                    return result;
                 }
-
-                //No queue present, discarding action.
             }
-        }
-
-        /// <summary>
-        /// Queues the specified action.
-        /// </summary>
-        /// <remarks>In case the queue does not exist yet, it will create it when queueing a <see cref="ActionFlags.Creational"/> action.</remarks>
-        /// <param name="action">The action.</param>
-        public void Queue(IAction action)
-        {
-            if (action == null)
-                throw new ArgumentNullException("action");
-
-            _Dataflow.Post(action);
+            
+            //No queue present, discarding action.
+            return false;
         }
 
         /// <summary>
@@ -101,7 +94,7 @@ namespace Nova.Threading
         /// <param name="e">The <see cref="ActionQueueEventArgs" /> instance containing the event data.</param>
         private void CleanUpQueue(object sender, ActionQueueEventArgs e)
         {
-            lock (_QueueLock)
+            lock (_Lock)
             {
                 var queue = sender as ActionQueue;
 
@@ -141,14 +134,7 @@ namespace Nova.Threading
 
             if (disposing)
             {
-                _Dataflow.Complete();
-
-                foreach (var queue in _Queues)
-                {
-                    queue.Dispose();
-                }
-
-                _Queues.Clear();
+                _Queues.Dispose();
             }
 
             _Disposed = true;
