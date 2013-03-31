@@ -19,6 +19,7 @@
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -31,6 +32,39 @@ namespace Nova.Threading.Implementations.WPF
     /// </summary>
     internal class TaskParallelAction : IAction
     {
+        /// <summary>
+        /// A Finishing Action
+        /// </summary>
+        private class FinishAction
+        {
+            /// <summary>
+            /// Gets or sets a value indicating whether [runs on main thread].
+            /// </summary>
+            /// <value>
+            ///   <c>true</c> if [runs on main thread]; otherwise, <c>false</c>.
+            /// </value>
+            public bool RunsOnMainThread { get; private set; }
+
+            /// <summary>
+            /// Gets or sets the action.
+            /// </summary>
+            /// <value>
+            /// The action.
+            /// </value>
+            public Action Action { get; private set; }
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="FinishAction" /> class.
+            /// </summary>
+            /// <param name="action">The action.</param>
+            /// <param name="runsOnMainThread">if set to <c>true</c> [runs on main thread].</param>
+            public FinishAction(Action action, bool runsOnMainThread)
+            {
+                RunsOnMainThread = runsOnMainThread;
+                Action = action;
+            }
+        }
+
         private readonly bool _StartOnMainThread;
 
         private readonly TaskScheduler _UISheduler;
@@ -38,8 +72,7 @@ namespace Nova.Threading.Implementations.WPF
         private Func<bool> _CanExecute;
         private bool _CanExecuteRunsOnMainThread;
 
-        private Action _Finish;
-        private bool _FinishRunsOnMainThread;
+        private readonly List<FinishAction> _FinishingActions;
 
         private Action<Exception> _HandleException;
 
@@ -66,6 +99,7 @@ namespace Nova.Threading.Implementations.WPF
                               : dispatcher.Invoke(() => TaskScheduler.FromCurrentSynchronizationContext(), DispatcherPriority.Send);
 
             _Successfully = successful;
+            _FinishingActions = new List<FinishAction>();
         }
 
         /// <summary>
@@ -134,10 +168,16 @@ namespace Nova.Threading.Implementations.WPF
             {
                 Task task = _LastContinuationTask;
 
-                if (_Finish != null)
+                if (_FinishingActions.Count > 0)
                 {
-                    var finishSheduler = _FinishRunsOnMainThread ? _UISheduler : TaskScheduler.Default;
-                    task = task.ContinueWith(_ => _Finish(), Task.Factory.CancellationToken, TaskContinuationOptions.HideScheduler, finishSheduler);
+                    foreach (var finishingAction in _FinishingActions)
+                    {
+                        var action = finishingAction.Action;
+                        var finishSheduler = finishingAction.RunsOnMainThread ? _UISheduler : TaskScheduler.Default;
+                        task = task.ContinueWith(_ => action(), Task.Factory.CancellationToken, TaskContinuationOptions.HideScheduler, finishSheduler);
+                    }
+
+                    _FinishingActions.Clear();
                 }
 
                 if (_HandleException != null)
@@ -172,10 +212,16 @@ namespace Nova.Threading.Implementations.WPF
                                        _LastContinuationTask.Wait();
                                    }, TaskContinuationOptions.HideScheduler | TaskContinuationOptions.OnlyOnRanToCompletion);
 
-            if (_Finish != null)
+            if (_FinishingActions.Count > 0)
             {
-                var finishSheduler = _FinishRunsOnMainThread ? _UISheduler : TaskScheduler.Default;
-                task = task.ContinueWith(_ => _Finish(), Task.Factory.CancellationToken, TaskContinuationOptions.HideScheduler, finishSheduler);
+                foreach (var finishingAction in _FinishingActions)
+                {
+                    var action = finishingAction.Action;
+                    var finishSheduler = finishingAction.RunsOnMainThread ? _UISheduler : TaskScheduler.Default;
+                    task = task.ContinueWith(_ => action(), Task.Factory.CancellationToken, TaskContinuationOptions.HideScheduler, finishSheduler);
+                }
+
+                _FinishingActions.Clear();
             }
 
             if (_HandleException != null)
@@ -217,7 +263,7 @@ namespace Nova.Threading.Implementations.WPF
 
         /// <summary>
         ///     Specifies the Finishing logic.
-        ///     This can only be set once.
+        ///     This can set multiple times
         /// </summary>
         /// <param name="action">The action.</param>
         /// <param name="mainThread">True if the continuation executes on the main thread.</param>
@@ -227,12 +273,9 @@ namespace Nova.Threading.Implementations.WPF
             if (action == null)
                 throw new ArgumentNullException("action");
 
-            if (_Finish != null)
-                throw new Exception("Finish can only be set once.");
-
-            _Finish = action;
-            _FinishRunsOnMainThread = mainThread;
-
+            var finishAction = new FinishAction(action, mainThread);
+            _FinishingActions.Add(finishAction);
+            
             return this;
         }
 

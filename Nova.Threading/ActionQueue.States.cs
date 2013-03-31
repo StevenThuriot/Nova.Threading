@@ -209,7 +209,7 @@ namespace Nova.Threading
                 protected override bool EnqueueAction(IAction action)
                 {
                     //Reset state to running after completion. Blocked will be skipped if no action is queued before this one finishes.
-                    action.ContinueWith(ResetQueue);
+                    action.FinishWith(ResetQueue);
 
                     return _Queue._ActionBlock.Post(action);
                 }
@@ -294,7 +294,7 @@ namespace Nova.Threading
                 /// <returns></returns>
                 protected override bool EnqueueAction(IAction action)
                 {
-                    action.ContinueWith(() => FinalizeQueue(action));
+                    action.FinishWith(() => FinalizeQueue(action));
                     return _Queue._ActionBlock.Post(action);
                 }
 
