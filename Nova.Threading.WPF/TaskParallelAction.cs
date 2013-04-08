@@ -26,7 +26,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 
-namespace Nova.Threading.Implementations.WPF
+namespace Nova.Threading.WPF
 {
     /// <summary>
     ///     An internal class for IAction that uses the TPL.

@@ -21,7 +21,7 @@
 using System;
 using System.Threading.Tasks;
 
-namespace Nova.Threading.Implementations.WPF
+namespace Nova.Threading.WPF
 {
     /// <summary>
     /// Helper class to create an instance of IAction.
@@ -118,7 +118,7 @@ namespace Nova.Threading.Implementations.WPF
         {
             var taskParallelAction = action as TaskParallelAction;
             if (taskParallelAction == null)
-                throw new NotSupportedException("This type of action is not supported. Nova.Threading.Implementations.WPF only supports TPL actions.");
+                throw new NotSupportedException("This type of action is not supported. Nova.Threading.WPF only supports TPL actions.");
 
             return taskParallelAction.GetSuccessAsync();
         }

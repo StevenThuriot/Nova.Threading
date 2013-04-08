@@ -20,7 +20,7 @@
 
 using System;
 
-namespace Nova.Threading.Implementations.WPF
+namespace Nova.Threading.WPF
 {
     /// <summary>
     /// A Finishing Action
