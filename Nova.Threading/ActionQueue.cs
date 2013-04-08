@@ -31,7 +31,7 @@ namespace Nova.Threading
         /// <summary>
         /// The default wait timeout
         /// </summary>
-        public readonly static TimeSpan DefaultWaitTimeout = TimeSpan.FromMilliseconds(250);
+        public readonly static TimeSpan DefaultWaitTimeout = TimeSpan.FromMilliseconds(1500);
 
         private bool _Disposed;
         private readonly CancellationTokenSource _TokenSource;

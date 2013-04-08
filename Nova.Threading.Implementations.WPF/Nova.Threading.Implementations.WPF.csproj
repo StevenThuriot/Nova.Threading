@@ -49,6 +49,7 @@
     <Compile Include="..\GlobalAssemblyInfo.cs">
       <Link>Properties\GlobalAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="FinishAction.cs" />
     <Compile Include="TaskParallel.cs" />
     <Compile Include="TaskParallelAction.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

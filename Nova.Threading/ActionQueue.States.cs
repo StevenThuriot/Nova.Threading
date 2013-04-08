@@ -50,7 +50,7 @@ namespace Nova.Threading
             {
                 lock (actionQueue._Lock)
                 {
-                    actionQueue._State = new RunningActionQueueState(actionQueue);
+                    actionQueue._State = new InitialActionQueueState(actionQueue);
                 }
             }
 
@@ -104,6 +104,86 @@ namespace Nova.Threading
             protected abstract bool EnqueueAction(IAction action);
 
             #region *** Concrete States ***
+
+            /// <summary>
+            /// The initial state for an <see cref="ActionQueue" />.
+            /// <remarks>
+            /// The <see cref="ActionQueueState.InitialActionQueueState" /> is a special case of <see cref="ActionQueueState.BlockingActionQueueState" />. 
+            /// It will allow to enqueue only one action and remain blocked until that action finishes. When it does, it will turn into the <see cref="ActionQueueState.RunningActionQueueState" />.
+            /// 
+            /// This also implies that a Creational action is always blocking!
+            /// If that action is not succesful, the <see cref="ActionQueueState.InitialActionQueueState" /> will make sure the queue gets cleaned up.
+            /// </remarks>
+            /// </summary>
+            private class InitialActionQueueState : ActionQueueState
+            {
+                private volatile bool _CreationSucceeded;
+                private volatile bool _CreationalActionQueued;
+
+                /// <summary>
+                /// Initializes a new instance of the <see cref="ActionQueueState.InitialActionQueueState" /> class.
+                /// </summary>
+                /// <param name="queue">The queue.</param>
+                public InitialActionQueueState(ActionQueue queue)
+                    : base(queue)
+                {
+                    _CreationSucceeded = false;
+                    _CreationalActionQueued = false;
+                }
+
+                /// <summary>
+                /// Sets the state depending on the passed action.
+                /// </summary>
+                /// <param name="action">The action.</param>
+                protected override void SetStateDependingOn(IAction action)
+                {
+                    if (!_CreationSucceeded)
+                        return; //Don't change state until the queue creation has finished and succeeded.
+
+                    var actionQueue = _Queue;
+                    actionQueue._State = new RunningActionQueueState(actionQueue);
+                }
+
+                /// <summary>
+                /// Enqueues the action.
+                /// </summary>
+                /// <param name="action">The action.</param>
+                /// <returns></returns>
+                protected override bool EnqueueAction(IAction action)
+                {
+                    if (_CreationalActionQueued)
+                        return false;
+
+                    _CreationalActionQueued = true;
+
+                    action.FinishWith(() => InitializeQueue(action), Priority.Highest);
+                    return _Queue._ActionBlock.Post(action);
+                }
+
+                /// <summary>
+                /// Initializes the queue.
+                /// </summary>
+                /// <param name="action">The action.</param>
+                /// <returns></returns>
+                private bool InitializeQueue(IAction action)
+                {
+                    var actionQueue = _Queue;
+                    if (action.IsSuccesfull)
+                    {
+                        _CreationSucceeded = true;
+                        return true;
+                    }
+
+                    //Couldn't enter, complete and clean up queue :(
+
+                    actionQueue.Complete();
+
+                    var handler = actionQueue.CleanUpQueue;
+                    if (handler != null) handler(actionQueue, new ActionQueueEventArgs(actionQueue.ID));
+
+                    return false;
+                }
+            }
 
             /// <summary>
             /// Default running state that just executes received actions.
@@ -209,7 +289,7 @@ namespace Nova.Threading
                 protected override bool EnqueueAction(IAction action)
                 {
                     //Reset state to running after completion. Blocked will be skipped if no action is queued before this one finishes.
-                    action.FinishWith(ResetQueue);
+                    action.FinishWith(ResetQueue, Priority.Highest);
 
                     return _Queue._ActionBlock.Post(action);
                 }
@@ -294,7 +374,7 @@ namespace Nova.Threading
                 /// <returns></returns>
                 protected override bool EnqueueAction(IAction action)
                 {
-                    action.FinishWith(() => FinalizeQueue(action));
+                    action.FinishWith(() => FinalizeQueue(action), Priority.Highest);
                     return _Queue._ActionBlock.Post(action);
                 }
 
@@ -305,20 +385,22 @@ namespace Nova.Threading
                 /// <returns></returns>
                 private bool FinalizeQueue(IAction action)
                 {
+                    var actionQueue = _Queue;
+
                     if (action.IsSuccesfull)
                     {
-                        _Queue.Complete();
+                        actionQueue.Complete();
 
-                        var handler = _Queue.CleanUpQueue;
-                        if (handler != null) handler(_Queue, new ActionQueueEventArgs(_Queue.ID));
+                        var handler = actionQueue.CleanUpQueue;
+                        if (handler != null) handler(actionQueue, new ActionQueueEventArgs(actionQueue.ID));
 
                         return true;
                     }
                     
                     //Execution failed, reset queue to running.
-                    lock (_Queue._Lock)
+                    lock (actionQueue._Lock)
                     {
-                        _Queue._State = new RunningActionQueueState(_Queue);
+                        actionQueue._State = new RunningActionQueueState(actionQueue);
                     }
 
                     return false;

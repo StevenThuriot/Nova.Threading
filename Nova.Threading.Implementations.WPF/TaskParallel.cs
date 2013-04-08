@@ -114,13 +114,13 @@ namespace Nova.Threading.Implementations.WPF
         /// <param name="action">The action.</param>
         /// <returns></returns>
         /// <exception cref="System.NotSupportedException">This type of action is not supported</exception>
-        public static async Task<bool> GetSuccessAsync(this IAction action)
+        public static Task<bool> GetSuccessAsync(this IAction action)
         {
             var taskParallelAction = action as TaskParallelAction;
             if (taskParallelAction == null)
                 throw new NotSupportedException("This type of action is not supported. Nova.Threading.Implementations.WPF only supports TPL actions.");
 
-            return await taskParallelAction.GetSuccessAsync();
+            return taskParallelAction.GetSuccessAsync();
         }
     }
 }

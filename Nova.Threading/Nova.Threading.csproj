@@ -64,6 +64,7 @@
     <Compile Include="ActionQueueEventArgs.cs" />
     <Compile Include="ActionQueueManager.cs" />
     <Compile Include="FlagChecker.cs" />
+    <Compile Include="Priority.cs" />
     <Compile Include="ThreadingAttributes.cs" />
     <Compile Include="IAction.cs" />
     <Compile Include="IActionQueueManager.cs" />

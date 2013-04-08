@@ -79,12 +79,13 @@ namespace Nova.Threading
 
         /// <summary>
         /// Specifies the Finishing logic.
-        /// This can only be set once.
+        /// This can set multiple times.
         /// </summary>
         /// <param name="action">The action.</param>
+        /// <param name="priority">The priority. A lower</param>
         /// <param name="mainThread">True if the continuation executes on the main thread.</param>
         /// <returns></returns>
-	    IAction FinishWith(Action action, bool mainThread = false);
+	    IAction FinishWith(Action action, Priority priority = Priority.Normal, bool mainThread = false);
 
         /// <summary>
         /// Gets a value indicating whether this instance ran succesfully.
