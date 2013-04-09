@@ -1,4 +1,4 @@
-#region License
+﻿#region License
 
 // 
 //  Copyright 2012 Steven Thuriot
@@ -17,25 +17,13 @@
 // 
 
 #endregion
+using System;
 
-using Nova.Threading.Metadata;
-
-namespace Nova.Threading
+namespace Nova.Threading.Metadata
 {
     /// <summary>
-    /// ActionFlags Extensions.
+    /// This action will run unqueued. (Fire and forget)
     /// </summary>
-    internal static class ActionFlagsExtensions
-    {
-        /// <summary>
-        /// Checks the flags.
-        /// </summary>
-        /// <param name="flags">The flags.</param>
-        /// <param name="value">The value.</param>
-        /// <returns></returns>
-        public static bool CheckFlags(this ActionFlags flags, ActionFlags value)
-        {
-            return (flags & value) == value;
-        }
-    }
+    [AttributeUsage(AttributeTargets.Class)]
+    public class UnqueuedAttribute : Attribute { }
 }

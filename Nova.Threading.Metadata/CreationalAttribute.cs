@@ -1,7 +1,7 @@
-#region License
+﻿#region License
 
 // 
-//  Copyright 2012 Steven Thuriot
+//  Copyright 2013 Steven Thuriot
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,24 +18,13 @@
 
 #endregion
 
-using Nova.Threading.Metadata;
+using System;
 
-namespace Nova.Threading
+namespace Nova.Threading.Metadata
 {
     /// <summary>
-    /// ActionFlags Extensions.
+    /// A queue will be created if necessairy.
     /// </summary>
-    internal static class ActionFlagsExtensions
-    {
-        /// <summary>
-        /// Checks the flags.
-        /// </summary>
-        /// <param name="flags">The flags.</param>
-        /// <param name="value">The value.</param>
-        /// <returns></returns>
-        public static bool CheckFlags(this ActionFlags flags, ActionFlags value)
-        {
-            return (flags & value) == value;
-        }
-    }
+    [AttributeUsage(AttributeTargets.Class)]
+    public class CreationalAttribute : Attribute { }
 }

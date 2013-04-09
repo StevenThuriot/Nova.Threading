@@ -18,6 +18,7 @@
 #endregion
 using System;
 using System.Collections.Generic;
+using Nova.Threading.Metadata;
 
 namespace Nova.Threading
 {

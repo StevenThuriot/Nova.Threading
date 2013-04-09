@@ -20,6 +20,7 @@
 
 using System;
 using System.Threading.Tasks;
+using Nova.Threading.Metadata;
 
 namespace Nova.Threading
 {/// <summary>
