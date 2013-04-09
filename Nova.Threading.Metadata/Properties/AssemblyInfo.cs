@@ -26,4 +26,4 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyProduct("Nova.Threading.Metadata")]
 [assembly: ComVisible(false)]
 [assembly: CLSCompliant(true)]
-[assembly: Guid("43fe298d-3f63-48b5-8752-3a302a8260df")]
+[assembly: Guid("8214778F-A58A-4916-B800-DB64DA5DF68C")]

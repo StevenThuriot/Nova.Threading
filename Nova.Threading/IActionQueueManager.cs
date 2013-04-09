@@ -21,6 +21,9 @@ using System;
 
 namespace Nova.Threading
 {
+    /// <summary>
+    /// Interface for the instance that delegates the queued action to the correct ActionQueue.
+    /// </summary>
     public interface IActionQueueManager : IDisposable
     {
         /// <summary>

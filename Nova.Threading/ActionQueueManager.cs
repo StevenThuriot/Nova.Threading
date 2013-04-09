@@ -20,10 +20,10 @@
 
 using System;
 using System.Threading.Tasks;
-using Nova.Threading.Metadata;
 
 namespace Nova.Threading
-{/// <summary>
+{
+    /// <summary>
     /// The instance that delegates the queued action to the correct ActionQueue.
     /// </summary>
     public class ActionQueueManager : IActionQueueManager
