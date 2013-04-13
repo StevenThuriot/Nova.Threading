@@ -11,3 +11,7 @@ Nova Threading
 * However, they can be marked to run unqueued.
 * Metadata is easy to configure using attributes. (e.g. Blocking, Creational, ...)
 * Action implementation is decoupled from the queuing system. A WPF specific dll has already been made, based on the TPL.
+* Available on NuGet.org and SymbolSource.org:
+	* Nova.Threading
+	* Nova.Threading.WPF
+	* Nova.Threading.Metadata
