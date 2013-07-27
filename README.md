@@ -10,7 +10,7 @@ Nova Threading
 * Actions that belong to non-existant queues don't get executed.
 * However, they can be marked to run unqueued.
 * Metadata is easy to configure using attributes. (e.g. Blocking, Creational, ...)
-* Action implementation is decoupled from the queuing system. A WPF specific dll has already been made, based on the TPL.
+* Action implementation is decoupled from the queuing system. A WPF specific dll has already been made.
 * Available on NuGet.org and SymbolSource.org as
 	* Nova.Threading
 	* Nova.Threading.WPF
