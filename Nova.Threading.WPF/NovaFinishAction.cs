@@ -25,24 +25,8 @@ namespace Nova.Threading.WPF
     /// <summary>
     /// A Finishing Action
     /// </summary>
-    internal class FinishAction
+    internal class NovaFinishAction : NovaAction
     {
-        /// <summary>
-        /// Gets or sets a value indicating whether [runs on main thread].
-        /// </summary>
-        /// <value>
-        ///   <c>true</c> if [runs on main thread]; otherwise, <c>false</c>.
-        /// </value>
-        public bool RunsOnMainThread { get; private set; }
-
-        /// <summary>
-        /// Gets or sets the action.
-        /// </summary>
-        /// <value>
-        /// The action.
-        /// </value>
-        public Action Action { get; private set; }
-
         /// <summary>
         /// Gets or sets the priority.
         /// </summary>
@@ -52,15 +36,17 @@ namespace Nova.Threading.WPF
         public Priority Priority { get; private set; }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="FinishAction" /> class.
+        /// Initializes a new instance of the <see cref="NovaFinishAction" /> class.
         /// </summary>
         /// <param name="action">The action.</param>
         /// <param name="priority">The priority.</param>
         /// <param name="runsOnMainThread">if set to <c>true</c> [runs on main thread].</param>
-        public FinishAction(Action action, Priority priority, bool runsOnMainThread)
+        public NovaFinishAction(Action action, Priority priority, bool runsOnMainThread)
+            : base(action, runsOnMainThread)
         {
-            RunsOnMainThread = runsOnMainThread;
-            Action = action;
+            if (action == null)
+                throw new ArgumentNullException("action");
+
             Priority = priority;
         }
     }

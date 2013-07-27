@@ -56,33 +56,6 @@ namespace Nova.Threading.WPF
         }
 
         /// <summary>
-        /// Wraps the specified action.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="action">The action.</param>
-        /// <param name="id">The id.</param>
-        /// <param name="execution">The execution.</param>
-        /// <param name="successful">Returns <c>true</c> if this action ran succesfully.</param>
-        /// <param name="mainThread">Indicates whether this action starts executing on the main thread.</param>
-        /// <returns></returns>
-        public static IAction Wrap<T>(this T action, Func<T, Guid> id, Func<T, Func<bool>> execution, Func<T, Func<bool>> successful = null, bool mainThread = false)
-        {
-            var idResult = id(action);
-            var executionResult = execution(action);
-
-            Func<bool> successfulResult = null;
-            if (successful != null)
-            {
-                successfulResult = successful(action);
-            }
-
-            var wrappedAction = Wrap(idResult, executionResult, successfulResult, mainThread);
-            wrappedAction.Options = action.GetActionFlags();
-
-            return wrappedAction;
-        }
-
-        /// <summary>
         /// Wraps the specified function into an IAction.
         /// </summary>
         /// <param name="id">The ID.</param>
@@ -93,19 +66,6 @@ namespace Nova.Threading.WPF
         public static IAction Wrap(Guid id, Action action, Func<bool> successful = null, bool mainThread = false)
         {
             return new TaskParallelAction(id, action, mainThread, successful);
-        }
-
-        /// <summary>
-        /// Wraps the specified function into an IAction.
-        /// </summary>
-        /// <param name="id">The ID.</param>
-        /// <param name="function">The function.</param>
-        /// <param name="successful">Returns <c>true</c> if this action ran succesfully.</param>
-        /// <param name="mainThread">Indicates whether this action starts executing on the main thread.</param>
-        /// <returns></returns>
-        public static IAction Wrap(Guid id, Func<bool> function, Func<bool> successful = null, bool mainThread = false)
-        {
-            return new TaskParallelAction(id, function, mainThread, successful);
         }
 
         /// <summary>

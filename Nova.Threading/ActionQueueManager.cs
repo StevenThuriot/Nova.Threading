@@ -20,6 +20,7 @@
 
 using System;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 
 namespace Nova.Threading
 {
@@ -28,17 +29,29 @@ namespace Nova.Threading
     /// </summary>
     public class ActionQueueManager : IActionQueueManager
     {
-        private bool _Disposed;
-        private readonly object _Lock;
-        private readonly ActionQueueCollection _Queues;
+
+        private bool _disposed;
+        private readonly object _lock;
+        private readonly ActionQueueCollection _queues;
+
+
+        /// <summary>
+        /// Gets or sets the max degree of parallelism.
+        /// </summary>
+        /// <value>
+        /// The max degree of parallelism.
+        /// </value>
+        /// <remarks>This only gets used when creating a new queue.</remarks>
+        public int MaxDegreeOfParallelism { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ActionQueueManager" /> class.
         /// </summary>
         public ActionQueueManager()
         {
-            _Lock = new object();
-            _Queues = new ActionQueueCollection();
+            _lock = new object();
+            _queues = new ActionQueueCollection();
+            MaxDegreeOfParallelism = DataflowBlockOptions.Unbounded;
         }
 
         /// <summary>
@@ -51,7 +64,7 @@ namespace Nova.Threading
         /// </remarks>
         public bool Enqueue(IAction action)
         {
-            if (_Disposed) return false;
+            if (_disposed) return false;
 
             if (action == null)
                 throw new ArgumentNullException("action");
@@ -62,10 +75,10 @@ namespace Nova.Threading
                 return true;
             }
 
-            lock (_Lock)
+            lock (_lock)
             {
                 ActionQueue queue;
-                if (_Queues.TryGetValue(action.ID, out queue))
+                if (_queues.TryGetValue(action.ID, out queue))
                 {
                     var result = queue.Enqueue(action);
                     return result;
@@ -74,10 +87,10 @@ namespace Nova.Threading
                 //Create new Queue on Creational Actions when it doesn't exist yet.
                 if (action.Options.CheckFlags(ActionFlags.Creational))
                 {
-                    queue = new ActionQueue(action.ID);
+                    queue = new ActionQueue(action.ID, MaxDegreeOfParallelism);
                     queue.CleanUpQueue += CleanUpQueue;
 
-                    _Queues.Add(queue);
+                    _queues.Add(queue);
 
                     var result = queue.Enqueue(action);
                     return result;
@@ -95,15 +108,15 @@ namespace Nova.Threading
         /// <param name="e">The <see cref="ActionQueueEventArgs" /> instance containing the event data.</param>
         private void CleanUpQueue(object sender, ActionQueueEventArgs e)
         {
-            lock (_Lock)
+            lock (_lock)
             {
                 var queue = sender as ActionQueue;
 
-                if (queue == null && !_Queues.TryGetValue(e.ID, out queue))
+                if (queue == null && !_queues.TryGetValue(e.ID, out queue))
                     return; //Sender was null or not an ActionQueue and the Queue id was not found in our storage.
 
                 queue.Dispose();
-                _Queues.Remove(queue);
+                _queues.Remove(queue);
             }
         }
 
@@ -131,14 +144,14 @@ namespace Nova.Threading
         /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
         protected void Dispose(bool disposing)
         {
-            if (_Disposed) return;
+            if (_disposed) return;
 
             if (disposing)
             {
-                _Queues.Dispose();
+                _queues.Dispose();
             }
 
-            _Disposed = true;
+            _disposed = true;
         }
     }
 }

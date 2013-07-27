@@ -33,11 +33,11 @@ namespace Nova.Threading
         /// </summary>
         public readonly static TimeSpan DefaultWaitTimeout = TimeSpan.FromMilliseconds(1500);
 
-        private bool _Disposed;
-        private readonly CancellationTokenSource _TokenSource;
-        private readonly ActionBlock<IAction> _ActionBlock;
-        private readonly object _Lock;
-        private ActionQueueState _State;
+        private bool _disposed;
+        private readonly CancellationTokenSource _tokenSource;
+        private readonly TransformBlock<IAction, IAction> _stateBlock;
+        private readonly object _lock;
+        private ActionQueueState _state;
 
         /// <summary>
         /// Occurs when this queue needs to be cleaned up.
@@ -56,22 +56,48 @@ namespace Nova.Threading
         /// Initializes a new instance of the <see cref="ActionQueue" /> class.
         /// </summary>
         /// <param name="id">The queue ID.</param>
-        public ActionQueue(Guid id)
+        /// <param name="maxDegreeOfParallelism">The max degree of parallelism.</param>
+        public ActionQueue(Guid id, int maxDegreeOfParallelism)
         {
             ID = id;
 
-            _Lock = new object();
-
+            _lock = new object();
+            
             ActionQueueState.Initialize(this);
 
-            _TokenSource = new CancellationTokenSource();
+            _tokenSource = new CancellationTokenSource();
+            var transformationOptions = new ExecutionDataflowBlockOptions
+                {
+                    CancellationToken = _tokenSource.Token,
+                    MaxDegreeOfParallelism = 1
+                };
+
+            var transformation = new Func<IAction, IAction>(SetStateDependingOn);
+            _stateBlock = new TransformBlock<IAction, IAction>(transformation, transformationOptions);
+
             var options = new ExecutionDataflowBlockOptions
             {
-                CancellationToken = _TokenSource.Token,
-                MaxDegreeOfParallelism = 1
+                CancellationToken = _tokenSource.Token,
+                MaxDegreeOfParallelism = maxDegreeOfParallelism
             };
 
-            _ActionBlock = new ActionBlock<IAction>(x => x.Execute(), options);
+            var actionBlock = new ActionBlock<IAction>(x => x.Execute(), options);
+
+            _stateBlock.LinkTo(actionBlock, EnqueueAction);
+            _stateBlock.LinkTo(DataflowBlock.NullTarget<IAction>()); //Remove those that can't be queued.
+
+            _stateBlock.Completion.ContinueWith(_ => actionBlock.Complete());
+        }
+
+        private IAction SetStateDependingOn(IAction action)
+        {
+            _state.SetStateDependingOn(action);
+            return action;
+        }
+
+        private bool EnqueueAction(IAction action)
+        {
+            return _state.CanEnqueueAction(action);
         }
 
         /// <summary>
@@ -80,7 +106,7 @@ namespace Nova.Threading
         /// <param name="action">The action.</param>
         public bool Enqueue(IAction action)
         {
-            return _State.Enqueue(action);
+            return _stateBlock.Post(action);
         }
 
         /// <summary>
@@ -88,14 +114,14 @@ namespace Nova.Threading
         /// </summary>
         private void Complete(bool cancelIfNeeded = true)
         {
-            lock (_Lock)
+            lock (_lock)
             {
-                _ActionBlock.Complete();
+                _stateBlock.Complete();
 
-                if (cancelIfNeeded && !_ActionBlock.Completion.Wait(DefaultWaitTimeout))
+                if (cancelIfNeeded && !_stateBlock.Completion.Wait(DefaultWaitTimeout))
                 {
                     //Hard cancel in case it's needed.
-                    _TokenSource.Cancel();
+                    _tokenSource.Cancel();
                 }
             }
         }
@@ -124,23 +150,23 @@ namespace Nova.Threading
         /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
         protected void Dispose(bool disposing)
         {
-            if (_Disposed) return;
+            if (_disposed) return;
 
             if (disposing)
             {
                 ActionQueueState.SetAsDisposed(this);
 
-                if (!_ActionBlock.Completion.IsCompleted)
+                if (!_stateBlock.Completion.IsCompleted)
                 {
                     //Leaving current step/use case. No more actions should be executed.
                     Complete();
                 }
 
-                _TokenSource.Dispose();
+                _tokenSource.Dispose();
                 CleanUpQueue = null;
             }
 
-            _Disposed = true;
+            _disposed = true;
         }
     }
 }

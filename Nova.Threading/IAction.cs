@@ -17,7 +17,6 @@
 // 
 #endregion
 using System;
-using Nova.Threading.Metadata;
 
 namespace Nova.Threading
 {
@@ -48,20 +47,13 @@ namespace Nova.Threading
         void Execute();
 
         /// <summary>
-        /// Creates a continuation that executes when the target completes.
+        /// Specifies the Can Excute logic.
+        /// This can only be set once.
         /// </summary>
         /// <param name="action">The action.</param>
         /// <param name="mainThread">True if the continuation executes on the main thread.</param>
         /// <returns></returns>
-        IAction ContinueWith(Action action, bool mainThread = false);
-
-        /// <summary>
-        /// Creates a continuation that executes when the target completes.
-        /// </summary>
-        /// <param name="action">The function.</param>
-        /// <param name="mainThread">True if the continuation executes on the main thread.</param>
-        /// <returns></returns>
-        IAction ContinueWith(Func<bool, bool> action, bool mainThread = false);
+        IAction CanExecute(Func<bool> action, bool mainThread = true);
 
         /// <summary>
         /// Exception handler for this action.
@@ -70,13 +62,12 @@ namespace Nova.Threading
         IAction HandleException(Action<Exception> action);
 
         /// <summary>
-        /// Specifies the Can Excute logic.
-        /// This can only be set once.
+        /// Creates a continuation that executes when the target completes.
         /// </summary>
         /// <param name="action">The action.</param>
         /// <param name="mainThread">True if the continuation executes on the main thread.</param>
         /// <returns></returns>
-        IAction CanExecute(Func<bool> action, bool mainThread = true);
+        IAction ContinueWith(Action action, bool mainThread = false);
 
         /// <summary>
         /// Specifies the Finishing logic.
