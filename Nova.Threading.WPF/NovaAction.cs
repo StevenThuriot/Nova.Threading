@@ -17,8 +17,6 @@
 #endregion
 
 using System;
-using System.Windows;
-using System.Windows.Threading;
 
 namespace Nova.Threading.WPF
 {
@@ -27,7 +25,7 @@ namespace Nova.Threading.WPF
     /// </summary>
     internal class NovaAction
     {
-        private readonly bool _runsOnMainThread;
+        private readonly Action _action;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NovaAction" /> class.
@@ -36,42 +34,24 @@ namespace Nova.Threading.WPF
         /// <param name="runsOnMainThread">if set to <c>true</c> [runs on main thread].</param>
         public NovaAction(Action action, bool runsOnMainThread)
         {
+            _action = action;
             if (action == null)
                 throw new ArgumentNullException("action");
 
-            _runsOnMainThread = runsOnMainThread;
-            Action = action;
+            RunsOnMainThread = runsOnMainThread;
         }
-
+        
         /// <summary>
-        /// Gets or sets the action.
+        /// Gets a value indicating whether this action runs on th main thread.
         /// </summary>
-        /// <value>
-        /// The action.
-        /// </value>
-        public Action Action { get; private set; }
+        public bool RunsOnMainThread { get; private set; }
 
         /// <summary>
         /// Executes this instance.
         /// </summary>
         public void Execute()
         {
-            if (_runsOnMainThread)
-            {
-                var application = Application.Current;
-                if (application != null)
-                {
-                    var dispatcher = application.Dispatcher;
-                    if (dispatcher != null)
-                    {
-                        dispatcher.Invoke(DispatcherPriority.Send, Action);
-                    }
-                }
-            }
-            else
-            {
-                Action();
-            }
+            _action();
         }
     }
 }

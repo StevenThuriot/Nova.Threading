@@ -26,7 +26,7 @@ namespace Nova.Threading.WPF
     /// <summary>
     /// Helper class to create an instance of IAction.
     /// </summary>
-    public static class TaskParallel
+    public static class ActionWrapper
     {
         /// <summary>
         /// Wraps the specified action.
@@ -65,7 +65,7 @@ namespace Nova.Threading.WPF
         /// <returns></returns>
         public static IAction Wrap(Guid id, Action action, Func<bool> successful = null, bool mainThread = false)
         {
-            return new TaskParallelAction(id, action, mainThread, successful);
+            return new ActionImplementation(id, action, mainThread, successful);
         }
 
         /// <summary>
@@ -76,11 +76,11 @@ namespace Nova.Threading.WPF
         /// <exception cref="System.NotSupportedException">This type of action is not supported</exception>
         public static Task<bool> GetSuccessAsync(this IAction action)
         {
-            var taskParallelAction = action as TaskParallelAction;
-            if (taskParallelAction == null)
+            var novaAction = action as ActionImplementation;
+            if (novaAction == null)
                 throw new NotSupportedException("This type of action is not supported. Nova.Threading.WPF only supports TPL actions.");
 
-            return taskParallelAction.GetSuccessAsync();
+            return novaAction.GetSuccessAsync();
         }
     }
 }

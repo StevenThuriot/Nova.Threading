@@ -31,7 +31,7 @@ namespace Nova.Threading.WPF
     /// <summary>
     ///     An internal class for IAction that uses the TPL.
     /// </summary>
-    internal class TaskParallelAction : IAction
+    internal class ActionImplementation : IAction
     {
         private Func<bool> _canExecute;
         private bool _canExecuteRunsOnMainThread;
@@ -47,11 +47,11 @@ namespace Nova.Threading.WPF
         private TaskCompletionSource<bool> _taskCompletionSource;
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="TaskParallelAction" /> class.
+        ///     Initializes a new instance of the <see cref="ActionImplementation" /> class.
         /// </summary>
         /// <param name="id">The ID.</param>
         /// <param name="successful">Returns <c>true</c> if this action ran succesfully.</param>
-        private TaskParallelAction(Guid id, Func<bool> successful)
+        private ActionImplementation(Guid id, Func<bool> successful)
         {
             ID = id;
 
@@ -64,13 +64,13 @@ namespace Nova.Threading.WPF
         }
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="TaskParallelAction" /> class.
+        ///     Initializes a new instance of the <see cref="ActionImplementation" /> class.
         /// </summary>
         /// <param name="id">The ID.</param>
         /// <param name="action">The function.</param>
         /// <param name="startOnMainThread">Bool indicating if the first task runs on the main thread.</param>
         /// <param name="successful">Returns <c>true</c> if this action ran succesfully.</param>
-        public TaskParallelAction(Guid id, Action action, bool startOnMainThread, Func<bool> successful)
+        public ActionImplementation(Guid id, Action action, bool startOnMainThread, Func<bool> successful)
             : this(id, successful)
         {
             if (action == null)
@@ -104,6 +104,9 @@ namespace Nova.Threading.WPF
             try
             {
                 ExecuteLogic();
+
+                if (_taskCompletionSource != null)
+                    _taskCompletionSource.SetResult(true);
             }
             catch (Exception ex)
             {
@@ -116,10 +119,10 @@ namespace Nova.Threading.WPF
                     _handleException(ex);
                 else
                     throw;
-                
+
             }
         }
-
+        
         private void ExecuteLogic()
         {
             var canExecute = true;
@@ -138,15 +141,56 @@ namespace Nova.Threading.WPF
 
             if (!canExecute)
                 return;
+
+            var finishingActions = _finishingActions.OrderByDescending(x => x.Priority);
+            var novaActions = _actions.Union(finishingActions);
             
-            foreach (var action in _actions)
-                action.Execute();
+            //Create clean queue rather than add to the nova actions queue in case we want to execute this instance several times.
+            var executionQueue = new Queue<NovaAction>(novaActions);
 
-            if (_taskCompletionSource != null)
-                _taskCompletionSource.SetResult(true);
+            var dispatcher = Application.Current.Dispatcher;
+            var dispatchedAction = new Action<List<NovaAction>>(list => list.ForEach(x => x.Execute()));
 
-            foreach (var action in _finishingActions.OrderByDescending(x => x.Priority))
-                action.Execute();
+            while (executionQueue.Count > 0)
+            {
+                var novaAction = executionQueue.Dequeue();
+                
+                //Group following actions that run on the same thread as the next execution so we don't have to dispatch several items in a row.
+                var listOfSimilarActions = BuildListOfSimilarActions(novaAction, executionQueue);
+
+                if (novaAction.RunsOnMainThread)
+                {
+                    dispatcher.Invoke(DispatcherPriority.Send, dispatchedAction, listOfSimilarActions);
+                }
+                else
+                {
+                    dispatchedAction(listOfSimilarActions);
+                }
+            }
+        }
+
+        private static List<NovaAction> BuildListOfSimilarActions(NovaAction novaAction, Queue<NovaAction> executionQueue)
+        {
+            var listOfSimilarActions = new List<NovaAction>
+            {
+                novaAction
+            };
+
+            var runsOnMainThread = novaAction.RunsOnMainThread;
+
+            while (executionQueue.Count > 0)
+            {
+                var nextAction = executionQueue.Peek();
+                if (nextAction.RunsOnMainThread == runsOnMainThread)
+                {
+                    listOfSimilarActions.Add(executionQueue.Dequeue());
+                }
+                else
+                {
+                    break;
+                }
+            }
+            return listOfSimilarActions;
         }
 
         /// <summary>

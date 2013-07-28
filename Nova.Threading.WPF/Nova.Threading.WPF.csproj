@@ -52,8 +52,8 @@
     </Compile>
     <Compile Include="NovaFinishAction.cs" />
     <Compile Include="NovaAction.cs" />
-    <Compile Include="TaskParallel.cs" />
-    <Compile Include="TaskParallelAction.cs" />
+    <Compile Include="ActionWrapper.cs" />
+    <Compile Include="ActionImplementation.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
