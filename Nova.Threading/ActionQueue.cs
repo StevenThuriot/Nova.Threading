@@ -100,10 +100,7 @@ namespace Nova.Threading
 
         private bool EnqueueAction(IAction action)
         {
-            lock (_lock)
-            {
-                return _state.CanEnqueueAction(action);
-            }
+            return _state.CanEnqueueAction(action);
         }
 
         /// <summary>
@@ -120,15 +117,12 @@ namespace Nova.Threading
         /// </summary>
         private void Complete(bool cancelIfNeeded = true)
         {
-            lock (_lock)
-            {
-                _stateBlock.Complete();
+            _stateBlock.Complete();
 
-                if (cancelIfNeeded && !_stateBlock.Completion.Wait(DefaultWaitTimeout))
-                {
-                    //Hard cancel in case it's needed.
-                    _tokenSource.Cancel();
-                }
+            if (cancelIfNeeded && !_stateBlock.Completion.Wait(DefaultWaitTimeout))
+            {
+                //Hard cancel in case it's needed.
+                _tokenSource.Cancel();
             }
         }
 
