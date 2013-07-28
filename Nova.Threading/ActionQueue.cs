@@ -91,13 +91,19 @@ namespace Nova.Threading
 
         private IAction SetStateDependingOn(IAction action)
         {
-            _state.SetStateDependingOn(action);
-            return action;
+            lock (_lock)
+            {
+                _state.SetStateDependingOn(action);
+                return action;
+            }
         }
 
         private bool EnqueueAction(IAction action)
         {
-            return _state.CanEnqueueAction(action);
+            lock (_lock)
+            {
+                return _state.CanEnqueueAction(action);
+            }
         }
 
         /// <summary>

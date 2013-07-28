@@ -61,7 +61,7 @@ namespace Nova.Threading
                     actionQueue._state = new DisposedActionQueueState(actionQueue);
                 }
             }
-            
+
             /// <summary>
             /// Sets the state depending on the passed action.
             /// </summary>
