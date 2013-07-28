@@ -104,22 +104,20 @@ namespace Nova.Threading.WPF
             try
             {
                 ExecuteLogic();
-
-                if (_taskCompletionSource != null)
-                    _taskCompletionSource.SetResult(true);
             }
             catch (Exception ex)
             {
                 _crashed = true;
 
-                if (_taskCompletionSource != null)
-                    _taskCompletionSource.SetResult(false);
-
                 if (_handleException != null)
                     _handleException(ex);
                 else
                     throw;
-
+            }
+            finally
+            {
+                if (_taskCompletionSource != null)
+                    _taskCompletionSource.SetResult(IsSuccesfull);
             }
         }
         
