@@ -44,16 +44,18 @@ namespace Nova.Threading
                 /// Sets the state depending on the passed action.
                 /// </summary>
                 /// <param name="action">The action.</param>
-                internal override void SetStateDependingOn(IAction action)
+                internal override ActionQueueState Update(IAction action)
                 {
                     //If a new action gets queued, set the state to blocked. 
                     //If not, we don't need to change the state 
                     //  as it will polute memory without a reason.
+                    var blockedActionQueueState = new BlockedActionQueueState(_queue);
+                    _queue._state = blockedActionQueueState;
 
-                    _queue._state = new BlockedActionQueueState(_queue);
+                    return blockedActionQueueState;
                 }
 
-                internal override bool CanEnqueueAction(IAction action)
+                internal override bool CanEnqueue(IAction action)
                 {
                     //Reset state to running after completion. Blocked will be skipped if no action is queued before this one finishes.
                     action.FinishWith(ResetQueue, Priority.Highest);

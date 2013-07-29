@@ -66,24 +66,14 @@ namespace Nova.Threading
             /// Sets the state depending on the passed action.
             /// </summary>
             /// <param name="action">The action.</param>
-            internal virtual void SetStateDependingOn(IAction action)
-            {
-                if (action.Options.CheckFlags(ActionFlags.Terminating))
-                {
-                    _queue._state = new TerminatingActionQueueState(_queue);
-                }
-                else if (action.Options.CheckFlags(ActionFlags.Blocking))
-                {
-                    _queue._state = new BlockingActionQueueState(_queue);
-                }
-            }
+            internal abstract ActionQueueState Update(IAction action);
 
             /// <summary>
             /// Checks if the action can be queued.
             /// </summary>
             /// <param name="action">The action.</param>
             /// <returns></returns>
-            internal abstract bool CanEnqueueAction(IAction action);
+            internal abstract bool CanEnqueue(IAction action);
         }
     }
 }

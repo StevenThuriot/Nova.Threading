@@ -90,6 +90,7 @@
     <Compile Include="ActionQueueCollection.cs" />
     <Compile Include="ActionQueueEventArgs.cs" />
     <Compile Include="ActionQueueManager.cs" />
+    <Compile Include="FilterBlock.cs" />
     <Compile Include="FlagChecker.cs" />
     <Compile Include="Priority.cs" />
     <Compile Include="IAction.cs" />

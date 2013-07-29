@@ -51,13 +51,16 @@ namespace Nova.Threading
                 /// Sets the state depending on the passed action.
                 /// </summary>
                 /// <param name="action">The action.</param>
-                internal override void SetStateDependingOn(IAction action)
+                internal override ActionQueueState Update(IAction action)
                 {
                     if (!_creationSucceeded)
-                        return; //Don't change state until the queue creation has finished and succeeded.
+                        return this; //Don't change state until the queue creation has finished and succeeded.
 
                     var actionQueue = _queue;
-                    actionQueue._state = new RunningActionQueueState(actionQueue);
+                    var runningActionQueueState = new RunningActionQueueState(actionQueue);
+                    actionQueue._state = runningActionQueueState;
+
+                    return runningActionQueueState;
                 }
 
                 /// <summary>
@@ -65,7 +68,7 @@ namespace Nova.Threading
                 /// </summary>
                 /// <param name="action">The action.</param>
                 /// <returns></returns>
-                internal override bool CanEnqueueAction(IAction action)
+                internal override bool CanEnqueue(IAction action)
                 {
                     if (_creationalActionQueued)
                         return false;

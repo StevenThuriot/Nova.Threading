@@ -28,14 +28,10 @@ namespace Nova.Threading
     /// </summary>
     internal partial class ActionQueue : IDisposable
     {
-        /// <summary>
-        /// The default wait timeout
-        /// </summary>
-        public readonly static TimeSpan DefaultWaitTimeout = TimeSpan.FromMilliseconds(1500);
-
+        private readonly TimeSpan _defaultWaitTimeout;
         private bool _disposed;
         private readonly CancellationTokenSource _tokenSource;
-        private readonly TransformBlock<IAction, IAction> _stateBlock;
+        private readonly FilterBlock<IAction> _filterBlock;
         private readonly object _lock;
         private ActionQueueState _state;
 
@@ -57,23 +53,18 @@ namespace Nova.Threading
         /// </summary>
         /// <param name="id">The queue ID.</param>
         /// <param name="maxDegreeOfParallelism">The max degree of parallelism.</param>
-        public ActionQueue(Guid id, int maxDegreeOfParallelism)
+        /// <param name="defaultWaitTimeout">The default wait timeout.</param>
+        public ActionQueue(Guid id, int maxDegreeOfParallelism, TimeSpan defaultWaitTimeout)
         {
             ID = id;
 
             _lock = new object();
+            _defaultWaitTimeout = defaultWaitTimeout;
             
             ActionQueueState.Initialize(this);
 
             _tokenSource = new CancellationTokenSource();
-            var transformationOptions = new ExecutionDataflowBlockOptions
-                {
-                    CancellationToken = _tokenSource.Token,
-                    MaxDegreeOfParallelism = 1
-                };
-
-            var transformation = new Func<IAction, IAction>(SetStateDependingOn);
-            _stateBlock = new TransformBlock<IAction, IAction>(transformation, transformationOptions);
+            _filterBlock = new FilterBlock<IAction>(Filter, _tokenSource.Token);
 
             var options = new ExecutionDataflowBlockOptions
             {
@@ -83,24 +74,16 @@ namespace Nova.Threading
 
             var actionBlock = new ActionBlock<IAction>(x => x.Execute(), options);
 
-            _stateBlock.LinkTo(actionBlock, EnqueueAction);
-            _stateBlock.LinkTo(DataflowBlock.NullTarget<IAction>()); //Remove those that can't be queued.
-
-            _stateBlock.Completion.ContinueWith(_ => actionBlock.Complete());
+            _filterBlock.LinkTo(actionBlock);
+            _filterBlock.Completion.ContinueWith(_ => actionBlock.Complete());
         }
 
-        private IAction SetStateDependingOn(IAction action)
+        private bool Filter(IAction action)
         {
             lock (_lock)
             {
-                _state.SetStateDependingOn(action);
-                return action;
+                return _state.Update(action).CanEnqueue(action);
             }
-        }
-
-        private bool EnqueueAction(IAction action)
-        {
-            return _state.CanEnqueueAction(action);
         }
 
         /// <summary>
@@ -109,7 +92,7 @@ namespace Nova.Threading
         /// <param name="action">The action.</param>
         public bool Enqueue(IAction action)
         {
-            return _stateBlock.Post(action);
+            return _filterBlock.Post(action);
         }
 
         /// <summary>
@@ -117,9 +100,9 @@ namespace Nova.Threading
         /// </summary>
         private void Complete(bool cancelIfNeeded = true)
         {
-            _stateBlock.Complete();
+            _filterBlock.Complete();
 
-            if (cancelIfNeeded && !_stateBlock.Completion.Wait(DefaultWaitTimeout))
+            if (cancelIfNeeded && !_filterBlock.Completion.Wait(_defaultWaitTimeout))
             {
                 //Hard cancel in case it's needed.
                 _tokenSource.Cancel();
@@ -156,7 +139,7 @@ namespace Nova.Threading
             {
                 ActionQueueState.SetAsDisposed(this);
 
-                if (!_stateBlock.Completion.IsCompleted)
+                if (!_filterBlock.Completion.IsCompleted)
                 {
                     //Leaving current step/use case. No more actions should be executed.
                     Complete();

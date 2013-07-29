@@ -43,9 +43,10 @@ namespace Nova.Threading
                 /// Sets the state depending on the passed action.
                 /// </summary>
                 /// <param name="action">The action.</param>
-                internal override void SetStateDependingOn(IAction action)
+                internal override ActionQueueState Update(IAction action)
                 {
                     //Don't allow state changes. Wait for the Blocking Action to reset the queue to running.
+                    return this;
                 }
 
                 /// <summary>
@@ -53,7 +54,7 @@ namespace Nova.Threading
                 /// </summary>
                 /// <param name="action">The action.</param>
                 /// <returns></returns>
-                internal override bool CanEnqueueAction(IAction action)
+                internal override bool CanEnqueue(IAction action)
                 {
                     return false;
                 }

@@ -38,10 +38,13 @@ namespace Nova.Threading
                 {
                 }
 
-                internal override void SetStateDependingOn(IAction action)
+                internal override ActionQueueState Update(IAction action)
                 {
                     //A terminating ActionQueue State can only become terminated.
-                    _queue._state = new TerminatedActionQueueState(_queue);
+                    var terminatedActionQueueState = new TerminatedActionQueueState(_queue);
+                    _queue._state = terminatedActionQueueState;
+
+                    return terminatedActionQueueState;
                 }
 
                 /// <summary>
@@ -49,7 +52,7 @@ namespace Nova.Threading
                 /// </summary>
                 /// <param name="action">The action.</param>
                 /// <returns></returns>
-                internal override bool CanEnqueueAction(IAction action)
+                internal override bool CanEnqueue(IAction action)
                 {
                     action.FinishWith(() => FinalizeQueue(action), Priority.Highest);
                     return true;

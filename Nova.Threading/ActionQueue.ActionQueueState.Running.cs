@@ -36,11 +36,43 @@ namespace Nova.Threading
                 }
 
                 /// <summary>
+                /// Sets the state depending on the passed action.
+                /// </summary>
+                /// <param name="action">The action.</param>
+                /// <returns></returns>
+                internal override ActionQueueState Update(IAction action)
+                {
+                    if (action.Options.CheckFlags(ActionFlags.Terminating))
+                    {
+                        lock (_queue._lock)
+                        {
+                            var terminatingActionQueueState = new TerminatingActionQueueState(_queue);
+                            _queue._state = terminatingActionQueueState;
+                            
+                            return terminatingActionQueueState;
+                        }
+                    }
+                    
+                    if (action.Options.CheckFlags(ActionFlags.Blocking))
+                    {
+                        lock (_queue._lock)
+                        {
+                            var blockingActionQueueState = new BlockingActionQueueState(_queue);
+                            _queue._state = blockingActionQueueState;
+
+                            return blockingActionQueueState;
+                        }
+                    }
+
+                    return this;
+                }
+
+                /// <summary>
                 /// Checks if the action can be queued.
                 /// </summary>
                 /// <param name="action">The action.</param>
                 /// <returns></returns>
-                internal override bool CanEnqueueAction(IAction action)
+                internal override bool CanEnqueue(IAction action)
                 {
                     return true;
                 }

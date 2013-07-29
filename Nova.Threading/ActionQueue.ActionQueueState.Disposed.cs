@@ -42,7 +42,7 @@ namespace Nova.Threading
                 /// Sets the state depending on the passed action.
                 /// </summary>
                 /// <param name="action">The action.</param>
-                internal override void SetStateDependingOn(IAction action)
+                internal override ActionQueueState Update(IAction action)
                 {
                     //State transition is no longer allowed.
                     throw NewObjectDisposedException();
@@ -53,7 +53,7 @@ namespace Nova.Threading
                 /// </summary>
                 /// <param name="action">The action.</param>
                 /// <returns></returns>
-                internal override bool CanEnqueueAction(IAction action)
+                internal override bool CanEnqueue(IAction action)
                 {
                     throw NewObjectDisposedException();
                 }

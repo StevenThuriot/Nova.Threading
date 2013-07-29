@@ -44,6 +44,15 @@ namespace Nova.Threading
         /// <remarks>This only gets used when creating a new queue.</remarks>
         public int MaxDegreeOfParallelism { get; set; }
 
+
+        /// <summary>
+        /// Gets or sets the default wait timeout when completing a queue.
+        /// </summary>
+        /// <value>
+        /// TimeSpan.FromMilliseconds(1500)
+        /// </value>
+        public TimeSpan DefaultWaitTimeout { get; set; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ActionQueueManager" /> class.
         /// </summary>
@@ -52,6 +61,7 @@ namespace Nova.Threading
             _lock = new object();
             _queues = new ActionQueueCollection();
             MaxDegreeOfParallelism = DataflowBlockOptions.Unbounded;
+            DefaultWaitTimeout = TimeSpan.FromMilliseconds(1500);
         }
 
         /// <summary>
@@ -87,7 +97,7 @@ namespace Nova.Threading
                 //Create new Queue on Creational Actions when it doesn't exist yet.
                 if (action.Options.CheckFlags(ActionFlags.Creational))
                 {
-                    queue = new ActionQueue(action.ID, MaxDegreeOfParallelism);
+                    queue = new ActionQueue(action.ID, MaxDegreeOfParallelism, DefaultWaitTimeout);
                     queue.CleanUpQueue += CleanUpQueue;
 
                     _queues.Add(queue);
