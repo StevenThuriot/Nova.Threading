@@ -123,22 +123,22 @@ namespace Nova.Threading.WPF
         
         private void ExecuteLogic()
         {
-            var canExecute = true;
+            var application = Application.Current;
+
+            if (application == null)
+                return;
+
+            var dispatcher = application.Dispatcher;
 
             if (_canExecute != null)
             {
-                if (_canExecuteRunsOnMainThread)
-                {
-                    canExecute = (bool) Application.Current.Dispatcher.Invoke(DispatcherPriority.Send, _canExecute);
-                }
-                else
-                {
-                    canExecute = _canExecute();
-                }
-            }
+                var canExecute = _canExecuteRunsOnMainThread
+                                    ? dispatcher.Invoke(_canExecute, DispatcherPriority.Send)
+                                    : _canExecute();
 
-            if (!canExecute)
-                return;
+                if (!canExecute)
+                    return;
+            }
 
             var finishingActions = _finishingActions.OrderByDescending(x => x.Priority);
             var novaActions = _actions.Union(finishingActions);
@@ -146,8 +146,7 @@ namespace Nova.Threading.WPF
             //Create clean queue rather than add to the nova actions queue in case we want to execute this instance several times.
             var executionQueue = new Queue<NovaAction>(novaActions);
 
-            var dispatcher = Application.Current.Dispatcher;
-            var dispatchedAction = new Action<List<NovaAction>>(list => list.ForEach(x => x.Execute()));
+            
 
             while (executionQueue.Count > 0)
             {
@@ -158,21 +157,30 @@ namespace Nova.Threading.WPF
 
                 if (novaAction.RunsOnMainThread)
                 {
-                    dispatcher.Invoke(DispatcherPriority.Send, dispatchedAction, listOfSimilarActions);
+                    Action dispatchedAction = () =>
+                    {
+                        foreach (var action in listOfSimilarActions)
+                        {
+                            action.Execute();
+                        }
+                    };
+
+                    dispatcher.Invoke(dispatchedAction, DispatcherPriority.Send);
                 }
                 else
                 {
-                    dispatchedAction(listOfSimilarActions);
+                    foreach (var action in listOfSimilarActions)
+                    {
+                        action.Execute();
+                    }
                 }
             }
         }
 
-        private static List<NovaAction> BuildListOfSimilarActions(NovaAction novaAction, Queue<NovaAction> executionQueue)
+        private static IEnumerable<NovaAction> BuildListOfSimilarActions(NovaAction novaAction, Queue<NovaAction> executionQueue)
         {
-            var listOfSimilarActions = new List<NovaAction>
-            {
-                novaAction
-            };
+            var listOfSimilarActions = new Queue<NovaAction>();
+            listOfSimilarActions.Enqueue(novaAction);
 
             var runsOnMainThread = novaAction.RunsOnMainThread;
 
@@ -181,7 +189,8 @@ namespace Nova.Threading.WPF
                 var nextAction = executionQueue.Peek();
                 if (nextAction.RunsOnMainThread == runsOnMainThread)
                 {
-                    listOfSimilarActions.Add(executionQueue.Dequeue());
+                    var action = executionQueue.Dequeue();
+                    listOfSimilarActions.Enqueue(action);
                 }
                 else
                 {
