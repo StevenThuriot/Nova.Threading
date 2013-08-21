@@ -33,8 +33,8 @@ namespace Nova.Threading
             /// </summary>
             private class InitialActionQueueState : ActionQueueState
             {
-                private volatile bool _creationSucceeded;
-                private volatile bool _creationalActionQueued;
+                private bool _creationSucceeded;
+                private bool _creationalActionQueued;
 
                 /// <summary>
                 /// Initializes a new instance of the <see cref="ActionQueueState.InitialActionQueueState" /> class.
@@ -43,8 +43,6 @@ namespace Nova.Threading
                 public InitialActionQueueState(ActionQueue queue)
                     : base(queue)
                 {
-                    _creationSucceeded = false;
-                    _creationalActionQueued = false;
                 }
 
                 /// <summary>
@@ -56,9 +54,30 @@ namespace Nova.Threading
                     if (!_creationSucceeded)
                         return this; //Don't change state until the queue creation has finished and succeeded.
 
-                    var actionQueue = _queue;
-                    var runningActionQueueState = new RunningActionQueueState(actionQueue);
-                    actionQueue._state = runningActionQueueState;
+                    if (action.Options.CheckFlags(ActionFlags.Terminating))
+                    {
+                        lock (_queue._lock)
+                        {
+                            var terminatingActionQueueState = new TerminatingActionQueueState(_queue);
+                            _queue._state = terminatingActionQueueState;
+
+                            return terminatingActionQueueState;
+                        }
+                    }
+
+                    if (action.Options.CheckFlags(ActionFlags.Blocking))
+                    {
+                        lock (_queue._lock)
+                        {
+                            var blockingActionQueueState = new BlockingActionQueueState(_queue);
+                            _queue._state = blockingActionQueueState;
+
+                            return blockingActionQueueState;
+                        }
+                    }
+
+                    var runningActionQueueState = new RunningActionQueueState(_queue);
+                    _queue._state = runningActionQueueState;
 
                     return runningActionQueueState;
                 }
@@ -70,9 +89,8 @@ namespace Nova.Threading
                 /// <returns></returns>
                 internal override bool CanEnqueue(IAction action)
                 {
-                    if (_creationalActionQueued)
-                        return false;
-
+                    if (_creationalActionQueued) return false;
+                    
                     _creationalActionQueued = true;
 
                     action.FinishWith(() => InitializeQueue(action), Priority.Highest);
@@ -86,19 +104,18 @@ namespace Nova.Threading
                 /// <returns></returns>
                 private bool InitializeQueue(IAction action)
                 {
-                    var actionQueue = _queue;
                     if (action.IsSuccesfull)
                     {
                         _creationSucceeded = true;
                         return true;
                     }
 
+
                     //Couldn't enter, complete and clean up queue :(
+                    _queue.Complete();
 
-                    actionQueue.Complete();
-
-                    var handler = actionQueue.CleanUpQueue;
-                    if (handler != null) handler(actionQueue, new ActionQueueEventArgs(actionQueue.ID));
+                    var handler = _queue.CleanUpQueue;
+                    if (handler != null) handler(_queue, new ActionQueueEventArgs(_queue.ID));
 
                     return false;
                 }
