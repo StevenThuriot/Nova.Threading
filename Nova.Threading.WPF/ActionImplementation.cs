@@ -130,24 +130,23 @@ namespace Nova.Threading.WPF
 
             var dispatcher = application.Dispatcher;
 
-            if (_canExecute != null)
+            var canExecute = _canExecute != null;
+            if (canExecute)
             {
-                var canExecute = _canExecuteRunsOnMainThread
-                                    ? dispatcher.Invoke(_canExecute, DispatcherPriority.Send)
-                                    : _canExecute();
-
-                if (!canExecute)
-                    return;
+                canExecute = _canExecuteRunsOnMainThread
+                                 ? dispatcher.Invoke(_canExecute, DispatcherPriority.Send)
+                                 : _canExecute();
             }
 
             var finishingActions = _finishingActions.OrderByDescending(x => x.Priority);
-            var novaActions = _actions.Union(finishingActions);
-            
+
+            var novaActions = canExecute
+                                ? _actions.Union(finishingActions)
+                                : finishingActions;
+
             //Create clean queue rather than add to the nova actions queue in case we want to execute this instance several times.
             var executionQueue = new Queue<NovaAction>(novaActions);
-
             
-
             while (executionQueue.Count > 0)
             {
                 var novaAction = executionQueue.Dequeue();
