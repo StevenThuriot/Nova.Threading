@@ -1,4 +1,4 @@
-Nova Threading
+Nova Threading [![Build status](https://ci.appveyor.com/api/projects/status?id=l6icu762e8ph4w1g)](https://ci.appveyor.com/project/Nova_Threading)
 ====
 
 * Action Queuing system designed for the Nova project.
